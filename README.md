@@ -1,15 +1,20 @@
-# ci5.host // The Laboratory
+###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): curl ~ 🔬 [ci5.host](https://github.com/dreamswag/ci5.host): cure ~ 🧪 [ci5.dev](https://github.com/dreamswag/ci5.dev): cork ~ 🥼 [ci5.network](https://github.com/dreamswag/ci5.network): cert
+# 🔬 ci5.host: CURE
 
-This is the **Forensic Layer** of the Ci5 project. 
+This repository provides the **Forensic Laboratory** for the Ci5 project. 
 
-While `ci5.dev` provides the tools, `ci5.host` provides the **Truth**. This repository contains the scripts necessary to run "Corks" in a high-security sandbox to verify their "Tangible Change Profile."
+### The Problem
+On standard Raspberry Pi 5 images (ext4), there is no read-only safety net. If a Docker container (Cork) escapes its sandbox, it can permanently modify your router's configuration (`/etc/config`), install backdoors, or ruin your packet discipline.
 
-### Why this exists:
-1. **Zero Trust:** Never trust a community-submitted Cork without seeing its diff.
-2. **Overlay Integrity:** Because OpenWrt uses an `/overlay` filesystem, we can track every single byte written to your Pi 5 in real-time.
-3. **Network Crumple Zones:** Audited Corks are trapped in `br-audit`, a bridge with no route to your LAN.
+### The Solution: Ephemeral Overlays
+The `cure` script uses the Linux kernel's `overlayfs` to create a temporary, RAM-based "Shadow FS." 
+- **Lowerdir:** Your real, permanent ext4 filesystem.
+- **Upperdir:** A volatile 50MB RAM-disk (`tmpfs`).
+- **Merged:** What the Cork sees.
 
-### Usage:
-Run the auditor directly on your Ci5-powered Raspberry Pi 5:
+When the audit runs, the Cork is given a "Shadow View" of your router. If it tries to modify a file, the change is written to the RAM-disk. The script then diffs the RAM-disk to reveal exactly what the Cork tried to do to your host.
+
+### Usage
+To audit a community cork:
 ```bash
-curl ci5.host/audit | sh -s [name-of-cork]
+curl ci5.host/audit | sh -s community-cork-name

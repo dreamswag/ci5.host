@@ -1,88 +1,80 @@
 #!/bin/sh
-# Ci5 Host Auditor - "The Lab"
-# Purpose: Isolated forensic analysis of Community Corks
+# Ci5 Host Auditor (ext4-Optimized) - "CURE"
+# Purpose: Detect Host-Infection attempts on non-overlay filesystems.
 
 CORK_NAME=$1
-if [ -z "$CORK_NAME" ]; then
-    echo "Usage: cork audit [cork-name]"
-    exit 1
-fi
+[ -z "$CORK_NAME" ] && { echo "Usage: cork audit [cork-name]"; exit 1; }
 
-# 1. GENERATE SOVEREIGN IDENTITY
-HW_HASH=$(cat /proc/cpuinfo | grep Serial | awk '{print $3}')
-USER_ID=$(sha256sum <<EOF | cut -c1-12
-$HW_HASH-ci5-auditor
-EOF
-)
+# 1. INITIALIZE IDENTITY
+USER_ID=$(cat /proc/cpuinfo | grep Serial | awk '{print $3}' | sha256sum | cut -c1-12)
+LAB_DIR="/tmp/ci5_lab"
+UPPER="$LAB_DIR/upper"
+WORK="$LAB_DIR/work"
+MERGE="$LAB_DIR/merge"
 
-echo "--- [Ci5 AUDIT INITIALIZED] ---"
-echo "Identity: $USER_ID"
-echo "Subject:  $CORK_NAME"
+echo "--- [Ci5 AUDIT: CURE MODE] ---"
+echo "ID: $USER_ID | Host: ext4-Sovereign"
 
-# 2. SNAPSHOT "BONE MARROW" (Core OS)
-echo "[*] Snapshotting filesystem state..."
-BEFORE_FILES=$(find /overlay/upper -type f | sort)
-BEFORE_CONF=$(ls -l /etc/config/ | sha256sum)
+# 2. PREPARE RAM-BACKED LABORATORY
+# We create a temporary overlay to 'catch' write attempts to /etc
+mkdir -p "$UPPER" "$WORK" "$MERGE"
+mount -t tmpfs tmpfs "$LAB_DIR" -o size=50M
 
-# 3. CREATE ISOLATED CRUMPLE ZONE (Network)
-echo "[*] Constructing Isolation Bridge (br-audit)..."
-docker network create \
-  --driver bridge \
-  --opt "com.docker.network.bridge.name"="br-audit" \
-  --internal \
-  ci5_audit_net > /dev/null
+# Re-create structure on the tmpfs
+mkdir -p "$UPPER" "$WORK" "$MERGE"
 
-# 4. RUN CORK IN THE LAB
-echo "[*] Launching Subject in Laboratory Mode..."
-# Note: We use --internal to block external WAN access by default unless monitored
+# 3. MOUNT THE SHADOW BONE-MARROW
+# This maps your real /etc (lower) to a RAM-disk (upper). 
+# Any changes the Cork makes will only exist in RAM.
+mount -t overlay overlay -o lowerdir=/etc,upperdir="$UPPER",workdir="$WORK" "$MERGE"
+
+echo "[*] Shadow-Mount created. Host /etc is now protected."
+
+# 4. RUN THE CORK IN THE LAB
+# We bind-mount our SHADOW /etc instead of the REAL /etc
 docker run -d \
   --name "audit_$CORK_NAME" \
-  --network ci5_audit_net \
-  --label "ci5.audit.id=$USER_ID" \
+  -v "$MERGE":/etc:rw \
+  --network bridge \
   "$CORK_NAME" > /dev/null
 
-echo "--- SUBJECT IS LIVE ---"
-echo "Monitoring for 60 seconds (Press Ctrl+C to finish early)..."
+echo "--- SUBJECT IS LIVE IN SHADOW-NET ---"
+echo "Monitoring for 30 seconds (or Ctrl+C)..."
 
-# 5. REAL-TIME MONITORING (Simple loop)
-# In a full build, this would pipe conntrack/tcpdump logs here
-count=0
-while [ $count -lt 60 ]; do
-    sleep 1
-    count=$((count+1))
-    printf "."
-done
+# Monitoring Loop
+i=0; while [ $i -lt 30 ]; do sleep 1; i=$((i+1)); printf "."; done
 echo ""
 
-# 6. REVEAL TANGIBLE CHANGES
-echo "--- [AUDIT REPORT: $CORK_NAME] ---"
+# 5. THE REVEAL (The Forensic Diff)
+echo "--- [TANGIBLE CHANGE REPORT] ---"
 
-echo "[Filesystem Changes]"
-AFTER_FILES=$(find /overlay/upper -type f | sort)
-DIFF=$(echo "$BEFORE_FILES" "$AFTER_FILES" | tr ' ' '\n' | sort | uniq -u)
+# A. Internal Changes (Inside Docker)
+echo "[Internal Cork Changes]"
+docker diff "audit_$CORK_NAME" | head -n 10
 
-if [ -z "$DIFF" ]; then
-    echo " > No files created on host overlay."
+# B. Host Infection Attempts (The "CURE" Check)
+# If the 'upper' directory in our RAM overlay has files, 
+# it means the Cork tried to modify /etc on your host.
+echo "[Host Breakout Attempts]"
+BREAKOUTS=$(find "$UPPER" -type f)
+
+if [ -z "$BREAKOUTS" ]; then
+    echo " > CLEAN: No host configuration changes detected."
+    RESULT="SAFE"
 else
-    echo "$DIFF" | sed 's/^/ + /'
+    echo " > DANGER: Cork attempted to modify these host files:"
+    echo "$BREAKOUTS" | sed "s|$UPPER| /etc|g"
+    RESULT="MALICIOUS"
 fi
 
-echo "[Network Telemetry]"
-# Check conntrack for the container's IP
-CONT_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "audit_$CORK_NAME")
-echo " > Subject IP: $CONT_IP"
-CONNS=$(conntrack -L | grep "$CONT_IP")
-if [ -z "$CONNS" ]; then
-    echo " > Zero outbound attempts detected."
-else
-    echo "$CONNS" | awk '{print " + Attemted: " $6}'
-fi
-
-# 7. CLEANUP
-echo "[*] Decontaminating Lab..."
+# 6. CLEANUP (Decontamination)
+echo "[*] Decontaminating..."
 docker stop "audit_$CORK_NAME" > /dev/null
 docker rm "audit_$CORK_NAME" > /dev/null
-docker network rm ci5_audit_net > /dev/null
+umount "$MERGE"
+umount "$LAB_DIR"
+rm -rf "$LAB_DIR"
 
 echo "--- [AUDIT COMPLETE] ---"
-echo "Submit result to ci5.network? (y/n)"
+echo "Result: $RESULT"
+echo "Log to ci5.network/cert? (y/n)"
