@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ci5.host | The Laboratory</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        .cmd { color: #fff; background: #222; padding: 10px; display: block; }
+    </style>
+</head>
+<body>
+    <h1>CI5.HOST // AUDIT_NODE</h1>
+    <p>Isolated forensic environment for Raspberry Pi 5 / OpenWrt.</p>
+    <hr>
+    <p>To audit a community cork before installation:</p>
+    <code class="cmd">curl ci5.host/audit | sh -s [cork-name]</code>
+    <p>This will:</p>
+    <ul>
+        <li>Snapshot your current filesystem.</li>
+        <li>Run the Cork in an air-gapped Docker bridge.</li>
+        <li>Diff all changes to your Host Overlay.</li>
+        <li>Track unauthorized "phone-home" attempts.</li>
+    </ul>
+</body>
+</html>
