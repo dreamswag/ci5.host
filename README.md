@@ -1,26 +1,74 @@
 ###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): curl ~ 🔬 [ci5.host](https://github.com/dreamswag/ci5.host): cure ~ 🧪 [ci5.dev](https://github.com/dreamswag/ci5.dev): cork ~ 🥼 [ci5.network](https://github.com/dreamswag/ci5.network): cert ~ 📡[ci5](https://github.com/dreamswag/ci5)🛰️
-# 🔬 [ci5.host](https://ci5.host): Isolated Cork Inspection 🔍🛸
+# 🔬 **[ci5.host](https://ci5.host): Isolated Cork Inspection** 🔍🛸
 
-This repository provides the **Forensic Laboratory** for the Ci5 project. 
+## 🧬 Purpose
 
-## 💾 The Problem:
-**On standard Raspberry Pi 5 images (ext4), there is no read-only safety net.** 
-* If a Docker container (Cork) escapes its sandbox, it can permanently:
-    *   modify your router's configuration (`/etc/config`)
-    *   install backdoors
-    *   ruin your packet discipline.
+**Forensic sandbox for Cork auditing:**
 
-## 🩻 The Solution: Ephemeral Overlays 
-The `cure` script uses the Linux kernel's `overlayfs` to create a temporary, RAM-based "Shadow FS." 
-- **Lowerdir:** Your real, permanent ext4 filesystem.
-- **Upperdir:** A volatile 50MB RAM-disk (`tmpfs`).
-- **Merged:** What the Cork sees.
+* On standard ext4, containers can escape and modify your host. 
+* The `cure` script uses ephemeral overlays to catch them in the act.
 
-* When the audit runs, the Cork is given a "Shadow View" of your router: 
- * If it tries to modify a file, the change is written to the RAM-disk.
-    * The script then diffs the RAM-disk to reveal exactly what the Cork tried to do to your host.
+## 🩻 How It Works
+
+```
+┌─────────────────────────────────────────┐
+│            OverlayFS Mount              │
+├─────────────────────────────────────────┤
+│  Upperdir (tmpfs/RAM)  ← Catches writes │
+├─────────────────────────────────────────┤
+│  Lowerdir (/etc)       ← Read-only      │
+└─────────────────────────────────────────┘
+```
+
+1. Cork runs in RAM-backed shadow environment
+2. Any host modification attempts are captured
+3. Script diffs and reports: `SAFE` or `MALICIOUS`
 
 ## 💉 Usage
-To audit a community cork:
+
 ```bash
-curl ci5.host/audit | sh -s community-cork-name
+curl ci5.host/audit | sh -s cork-name
+```
+
+**Output:**
+```
+--- [Ci5 AUDIT: CURE MODE] ---
+ID: a1b2c3d4e5f6 | Host: ext4-Sovereign
+
+[Host Breakout Attempts]
+ > CLEAN: No host configuration changes detected.
+
+--- [AUDIT COMPLETE] ---
+Result: SAFE
+```
+
+---
+
+## 🚨 When to Use
+
+| Scenario | Action |
+|----------|--------|
+| Installing community Cork | **Always audit first** |
+| Post-install validation | Run `validate.sh` instead |
+| Suspicious behavior | Audit + check logs |
+
+---
+
+## 📚 Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [CORKS.md](https://github.com/dreamswag/ci5.network/blob/main/docs/CORKS.md) | Full Cork auditing guide |
+| [MAINTENANCE.md](https://github.com/dreamswag/ci5.network/blob/main/docs/MAINTENANCE.md) | Diagnostics & recovery |
+| [SUPPORT.md](https://github.com/dreamswag/ci5.network/blob/main/docs/SUPPORT.md) | Self-service troubleshooting |
+
+---
+
+## 📁 Repository Structure
+
+```
+ci5.host/
+├── index.html    # Landing page
+├── audit.sh      # CURE script (overlayfs sandbox)
+└── README.md
+```
