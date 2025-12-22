@@ -10,12 +10,11 @@
             --matrix-black: #000000;
             --matrix-dark: #020b02;
             --matrix-dim: #051405;
-            --matrix-green: #00ff41;
+            --matrix-green: rgb(47, 207, 47);
             --matrix-bright: #ccffcc;
             --alert-red: #ff3333;
             
             --phosphor-bloom: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 20px rgba(0, 255, 65, 0.4);
-            --crt-flicker: 0.04;
         }
 
         /* --- RESET & BASE --- */
@@ -34,7 +33,7 @@
             flex-direction: column;
         }
 
-        /* --- CRT EFFECT LAYER (CSS ONLY - NO JS) --- */
+        /* --- CRT EFFECT LAYER --- */
         .crt-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -108,9 +107,43 @@
         }
 
         .system-status {
-            text-align: right;
-            font-size: 0.7rem;
-            opacity: 0.8;
+            display: flex; /* aligns items horizontally */
+            gap: 10px;     /* adds space between items */
+            align-items: center; 
+            font-size: 0.67rem;
+            opacity: 0.9;
+            letter-spacing: 0.44px;
+            color: rgba(255, 255, 255, 0.87);
+        }
+
+        /* Adds the vertical line separator */
+       .system-status div:nth-child(2) {
+            grid-row: 1;
+            grid-column: 1 / -1; /* Spans across the width of both items above */
+            justify-self: end;  /* Keeps it pinned to the right edge */
+            
+            /* Box Styling */
+            border: 1px solid var(--matrix-green);
+            background: rgba(0, 255, 65, 0.05);
+            padding: 4px 20px;
+            text-align: center;
+            width: fit-content; /* Ensures the box fits the text perfectly */
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);
+        }
+
+                /* --- BOTTOM: SYSTEM_UPTIME (BOXED) --- */
+        .system-status div:nth-child(3) {
+            grid-row: 1;
+            grid-column: 1 / -1; /* Spans across the width of both items above */
+            justify-self: end;  /* Keeps it pinned to the right edge */
+            
+            /* Box Styling */
+            border: 1px solid var(--matrix-green);
+            background: rgba(0, 255, 65, 0.05);
+            padding: 4px 17px;
+            text-align: center;
+            width: fit-content; /* Ensures the box fits the text perfectly */
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);
         }
 
         /* --- MAIN DASHBOARD --- */
@@ -168,34 +201,107 @@
             padding: 0;
             display: flex;
             flex-direction: column;
+            overflow: hidden; /* Remove scrollbar */
+            position: relative;
+        }
+
+        p {
+            font-size: 0.88em;
+        }
+
+        /* WATERMARK BLEND LAYER */
+        .data-module::after {
+            content: "";
+            position: absolute;
+            bottom: 11%;
+            left: 0;
+            right: 0;
+            height: 33%;
+            background-image: url('static/signal.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: 222%;
+            opacity: 0.12;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            z-index: 1;
         }
 
         .module-header {
             background: var(--matrix-dim);
-            color: var(--matrix-green);
+            color: #ffffffee;
             padding: 0.5rem;
             font-weight: bold;
             border-bottom: 1px solid var(--matrix-green);
             text-transform: uppercase;
             font-size: 0.9rem;
             letter-spacing: 1px;
+            position: relative;
+            z-index: 2;
         }
 
         .stat-row {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column; 
             padding: 0.8rem;
             border-bottom: 1px solid rgba(0, 255, 65, 0.2);
             transition: background 0.2s;
+            cursor: help;
+            position: relative;
+            z-index: 2;
+        }
+
+        .stat-main {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
         }
 
         .stat-row:hover {
-            background: rgba(0, 255, 65, 0.1);
-            cursor: crosshair;
+            background: rgba(0, 255, 65, 0.15);
+            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
         }
 
-        .stat-label { opacity: 0.8; }
-        .stat-value { font-weight: bold; text-shadow: 0 0 5px var(--matrix-green); }
+        /* EXPANDED DETAILS CSS */
+        .stat-details {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-in;
+            font-size: 0.7rem;
+            color: var(--matrix-bright);
+            margin-top: 0;
+            border-left: 2px solid var(--matrix-green);
+            padding-left: 8px;
+        }
+
+        .stat-row:hover .stat-details {
+            max-height: 150px;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+            padding-bottom: 0.2rem;
+        }
+
+        .detail-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+        
+        .detail-block {
+            margin-top: 4px;
+            font-style: italic;
+            opacity: 0.8;
+            line-height: 1.2;
+        }
+
+        .detail-key { opacity: 0.7; }
+        .detail-val { color:#ffffff; opacity: 0.6; }
+
+        .stat-label { opacity: 0.741;  color: rgba(155, 255, 155, 0.548); font-size: 14px;}
+        .stat-value { font-weight: bold; text-shadow: 0 0 5px var(--matrix-green); color: #ffffff; }
 
         .warning-box {
             border: 1px solid var(--matrix-green);
@@ -224,7 +330,8 @@
             display: flex;
             justify-content: space-between;
             font-size: 0.8rem;
-            opacity: 0.7;
+            opacity: 0.6;
+            color: rgb(29, 77, 36);
         }
 
         .nav-link {
@@ -232,6 +339,7 @@
             text-decoration: none;
             margin-left: 2rem;
             position: relative;
+            color: rgba(41, 146, 41, 0.664);
         }
 
         .nav-link:hover {
@@ -298,9 +406,9 @@
                 <div class="subtitle">PROTOCOL: I.C.U.P. // ACTIVE</div>
             </div>
             <div class="system-status">
-                <div>SYSTEM_INTEGRITY: 100%</div>
-                <div>NET_SOVEREIGNTY: ENFORCED</div>
-                <div>UPTIME: FOREVER</div>
+                <div></div>
+                <div>NET_CORRECTIONAL: TRUE</div>
+                <div>SYSTEM_UPTIME: 498D</div>
             </div>
         </header>
 
@@ -333,9 +441,9 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
                 <div class="warning-box">
                     <div class="warning-title">>> REALITY CONSENSUS OVERRIDE</div>
                     <p>
-                        STANDARD ISP ROUTERS ARE BLACK BOXES DESIGNED FOR OPACITY. 
+                        ISP ROUTERS ARE BLACK BOXES DESIGNED FOR OPACITY. 
                         Ci5 IS A GLASS FORTRESS. 
-                        WE DO NOT TRUST CODE. WE EXECUTE IT IN A CAGE AND WATCH IT BLEED.
+                        DO NOT TRUST CODE. EXECUTE IN CAGE ⇨ LISTEN FOR SC2EAMS BACK HOME ⇨ REPORT WHEN IT DOES ⇨ HOME WON'T CALL AGAIN. 
                     </p>
                 </div>
             </section>
@@ -344,38 +452,97 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
                 <div class="module-header">SUB-ROUTINE STATUS</div>
                 
                 <div class="stat-row">
-                    <span class="stat-label">Intrusion Detection</span>
-                    <span class="stat-value">SURICATA [FULL]</span>
+                    <div class="stat-main">
+                        <span class="stat-label">Intrusion Detection</span>
+                        <span class="stat-value">SURICATA [ACTIVE]</span>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-line"><span class="detail-key">RULES:</span> <span class="detail-val">28,401 SIGNATURES</span></div>
+                        <div class="detail-line"><span class="detail-key">ACTION:</span> <span class="detail-val">MALICE_SIGNAL → POLICY_ENFORCED</span></div>
+                        <div class="detail-block">
+                            >> Inspects traffic streams and protocol behavior against exploit signatures. Policed upon match.
+                        </div>
+                    </div>
                 </div>
+
                 <div class="stat-row">
-                    <span class="stat-label">Packet Inspection</span>
-                    <span class="stat-value">DEEP // ACTIVE</span>
+                    <div class="stat-main">
+                        <span class="stat-label">Packet Inspection</span>
+                        <span class="stat-value">DEEP // ACTIVE</span>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-line"><span class="detail-key">SCOPE:</span> <span class="detail-val">LAYER 7 (APP)</span></div>
+                        <div class="detail-line"><span class="detail-key">METHOD:</span> <span class="detail-val">HEADER_DECAP</span></div>
+                        <div class="detail-block">
+                            >> Unpacks packet headers to analyze application logic, detecting hidden tunnels & C2 channels.
+                        </div>
+                    </div>
                 </div>
+
                 <div class="stat-row">
-                    <span class="stat-label">Traffic Analysis</span>
-                    <span class="stat-value">NTOPNG // L7</span>
+                    <div class="stat-main">
+                        <span class="stat-label">Traffic Analysis</span>
+                        <span class="stat-value">NTOPNG // L7</span>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-line"><span class="detail-key">VISIBILITY:</span> <span class="detail-val">FLOW_DECODE</span></div>
+                        <div class="detail-line"><span class="detail-key">METRIC:</span> <span class="detail-val">PROTOCOL_ID</span></div>
+                        <div class="detail-block">
+                            >> Real-time visualization of bandwidth consumers. Identifies devices & protocols by behavior.
+                        </div>
+                    </div>
                 </div>
+
                 <div class="stat-row">
-                    <span class="stat-label">Threat Intel</span>
-                    <span class="stat-value">CROWDSEC // GLOBAL</span>
+                    <div class="stat-main">
+                        <span class="stat-label">Threat Intel</span>
+                        <span class="stat-value">CROWDSEC // GLOBAL</span>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-line"><span class="detail-key">SOURCE:</span> <span class="detail-val">COMMUNITY_HIVE</span></div>
+                        <div class="detail-line"><span class="detail-key">EFFECT:</span> <span class="detail-val">PRE-EMPTIVE_BAN</span></div>
+                        <div class="detail-block">
+                            >> Ingests global attack signals. Blocks IPs reported by other nodes before they touch your WAN.
+                        </div>
+                    </div>
                 </div>
+
                 <div class="stat-row">
-                    <span class="stat-label">Audit Engine</span>
-                    <span class="stat-value">C.U.R.E. // RAM</span>
+                    <div class="stat-main">
+                        <span class="stat-label">Audit Engine</span>
+                        <span class="stat-value">C.U.R.E. // RAM</span>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-line"><span class="detail-key">TECH:</span> <span class="detail-val">OVERLAYFS_DIFF</span></div>
+                        <div class="detail-line"><span class="detail-key">TRAP:</span> <span class="detail-val">WRITE_CAPTURE</span></div>
+                        <div class="detail-block">
+                            >> Creates ephemeral RAM layer over /etc. If Cork writes to it, intent is flagged as malicious.
+                        </div>
+                    </div>
                 </div>
+
                 <div class="stat-row">
-                    <span class="stat-label">Kill Switch</span>
-                    <span class="stat-value">I.C.U.P. // READY</span>
+                    <div class="stat-main">
+                        <span class="stat-label">Kill Switch</span>
+                        <span class="stat-value">I.C.U.P. // READY</span>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-line"><span class="detail-key">TRIGGER:</span> <span class="detail-val">MANUAL / AUTO</span></div>
+                        <div class="detail-line"><span class="detail-key">EXEC:</span> <span class="detail-val">SIGKILL + PRUNE</span></div>
+                        <div class="detail-block">
+                            >> Instant termination of all Smart Path containers. Wipes volumes. Reverts to kernel routing only.
+                        </div>
+                    </div>
                 </div>
             </aside>
         </main>
 
         <footer>
-            <div class="footer-id">ci5.host | v7.4-RC-1 | NO_SYSTEM_IS_SAFE</div>
+            <div class="footer-id">v7.4-RC-1 | N0 R19H75 D353RV3D.</div>
             <nav>
                 <a href="https://ci5.run" class="nav-link">RUN</a>
                 <a href="https://ci5.dev" class="nav-link">DEV</a>
-                <a href="https://ci5.network" class="nav-link">NET</a>
+                <a href="https://ci5.network" class="nav-link">NETWORK</a>
             </nav>
         </footer>
 
