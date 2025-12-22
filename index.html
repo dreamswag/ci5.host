@@ -3,22 +3,190 @@
 <head>
     <title>ci5.host | The Laboratory</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
-        .cmd { color: #fff; background: #222; padding: 10px; display: block; }
+        :root {
+            --neon: #0f0;
+            --bg: #000;
+            --panel-bg: #080808;
+            --border: #333;
+            --subtext: #666;
+            --highlight: #ccff00;
+        }
+
+        body { 
+            background: var(--bg); 
+            color: var(--neon); 
+            font-family: monospace; 
+            margin: 0;
+            padding: 2vh 2vw;
+            height: 96vh; /* Fit to viewport */
+            overflow: hidden; /* Force single page */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Strip */
+        header {
+            border-bottom: 1px solid var(--neon);
+            padding-bottom: 1vh;
+            margin-bottom: 2vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; letter-spacing: 2px; }
+        .subtitle { color: #fff; font-size: 0.9rem; }
+
+        /* Main Split Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr; /* Right side slightly wider for matrix */
+            gap: 2vw;
+            flex-grow: 1;
+            height: 100%;
+        }
+
+        /* Panels */
+        .panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 { 
+            color: #fff; 
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 5px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+        }
+
+        /* Content Elements */
+        .cmd { 
+            color: #fff; 
+            background: #111; 
+            padding: 12px; 
+            border-left: 3px solid var(--neon);
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        ul { padding-left: 15px; margin: 0; }
+        li { margin-bottom: 12px; font-size: 0.85rem; line-height: 1.3; }
+        
+        strong { color: #fff; }
+        
+        .subtext { 
+            color: var(--subtext); 
+            font-size: 0.8em; 
+            display: block; 
+            margin-top: 3px;
+            font-style: italic;
+        }
+
+        /* The Matrix Box */
+        .matrix-box {
+            border: 1px solid var(--border);
+            background: var(--panel-bg);
+            padding: 15px;
+            flex-grow: 1; /* Fill remaining vertical space */
+            overflow-y: auto;
+        }
+
+        .highlight { color: var(--highlight); }
+
+        /* Footer / Integrity Section at bottom of Left Panel */
+        .integrity-footer {
+            margin-top: auto; /* Push to bottom */
+            border-top: 1px dashed var(--border);
+            padding-top: 15px;
+        }
+        
+        p { margin: 5px 0 10px 0; font-size: 0.85rem; color: #ccc;}
+
     </style>
 </head>
 <body>
-    <h1>CI5.HOST // AUDIT_NODE</h1>
-    <p>Isolated forensic environment for Raspberry Pi 5 / OpenWrt.</p>
-    <hr>
-    <p>To audit a community cork before installation:</p>
-    <code class="cmd">curl ci5.host/audit | sh -s [cork-name]</code>
-    <p>This will:</p>
-    <ul>
-        <li>Snapshot your current filesystem.</li>
-        <li>Run the Cork in an air-gapped Docker bridge.</li>
-        <li>Diff all changes to your Host Overlay.</li>
-        <li>Track unauthorized "phone-home" attempts.</li>
-    </ul>
+
+    <header>
+        <div>
+            <h1>CI5.HOST // AUDIT_NODE</h1>
+            <span class="subtitle">Forensic Gateway & Threat Lab</span>
+        </div>
+        <div style="text-align: right; font-size: 0.8rem; color: #fff;">
+            STATUS: <span style="color:var(--neon)">ACTIVE</span><br>
+            SECURE_BOOT: ENABLED
+        </div>
+    </header>
+
+    <div class="grid-container">
+        
+        <section class="panel">
+            <code class="cmd">curl ci5.host/audit | sh -s [cork-name]</code>
+
+            <h2>1. The "CURE" Protocol (Static)</h2>
+            <p>Mandatory autopsy for all registry submissions.</p>
+
+            <ul>
+                <li>
+                    <strong>Filesystem Mirage (OverlayFS):</strong>
+                    <br>
+                    Corks write to a <code>tmpfs</code> RAM overlay.
+                    <span class="subtext">Persistence is impossible; modifications vanish on exit.</span>
+                </li>
+                <li>
+                    <strong>Syscall Panopticon (Seccomp):</strong>
+                    <br>
+                    Privileged vectors (<code>ptrace</code>, <code>mount</code>) are flagged.
+                    <span class="subtext">Zero-tolerance policy for kernel interaction.</span>
+                </li>
+            </ul>
+
+            <div class="integrity-footer">
+                <h2>System Integrity</h2>
+                <p style="color: #666; font-size: 0.741rem;">
+                   The 'Ci5' architecture assumes a <strong>Zero Trust</strong> posture. Any code introduced is subject to sandboxing, packet inspection, and behavioral analysis. Identification precedes execution.
+                </p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>2. The "Full Stack" Standard (Active)</h2>
+            <p>The hostile environment awaiting the payload.</p>
+
+            <div class="matrix-box">
+                <ul>
+                    <li>
+                        <span class="highlight">SURICATA (IDS/IPS):</span>
+                        <br><strong>Hyperscan DPI & Stream Reassembly.</strong>
+                        <span class="subtext"> Inspects payloads against 60k+ Emerging Threats signatures. C2 handshakes detected regardless of port.</span>
+                    </li>
+                    
+                    <li>
+                        <span class="highlight">CROWDSEC (Hive Mind):</span>
+                        <br><strong>Collaborative Behavioral Blocking.</strong>
+                        <span class="subtext">Aggression on one node triggers a global network-wide IP ban.</span>
+                    </li>
+
+                    <li>
+                        <span class="highlight">NTOPNG (Layer-7):</span>
+                        <br><strong>Flow-based Visualization.</strong>
+                        <span class="subtext">All socket connections logged and categorized. No hidden channels.</span>
+                    </li>
+                    
+                    <li>
+                        <span class="highlight">DNS LOCKDOWN:</span>
+                        <br><strong>Recursive Resolution Control.</strong>
+                        <span class="subtext">Known tracking/malware domains and DGA algorithms are null-routed locally.</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
 </body>
 </html>
