@@ -1,190 +1,383 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ci5.host | The Laboratory</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ci5.host // PROTOCOL: I.C.U.P.</title>
     <style>
+        /* --- CORE VARIABLES --- */
         :root {
-            --neon: #0f0;
-            --bg: #000;
-            --panel-bg: #080808;
-            --border: #333;
-            --subtext: #666;
-            --highlight: #ccff00;
+            --matrix-black: #000000;
+            --matrix-dark: #020b02;
+            --matrix-dim: #051405;
+            --matrix-green: #00ff41;
+            --matrix-bright: #ccffcc;
+            --alert-red: #ff3333;
+            
+            --phosphor-bloom: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 20px rgba(0, 255, 65, 0.4);
+            --crt-flicker: 0.04;
         }
 
-        body { 
-            background: var(--bg); 
-            color: var(--neon); 
-            font-family: monospace; 
-            margin: 0;
-            padding: 2vh 2vw;
-            height: 96vh; /* Fit to viewport */
-            overflow: hidden; /* Force single page */
-            box-sizing: border-box;
+        /* --- RESET & BASE --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--matrix-black);
+            color: var(--matrix-green);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow-x: hidden;
+            height: 100vh;
+            width: 100vw;
             display: flex;
             flex-direction: column;
         }
 
-        /* Header Strip */
+        /* --- CRT EFFECT LAYER (CSS ONLY - NO JS) --- */
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 999;
+            animation: flicker 0.15s infinite;
+        }
+
+        .crt-overlay::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 998;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 65, 0.04) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+        }
+
+        /* --- LAYOUT GRID --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* --- HEADER HUD --- */
         header {
-            border-bottom: 1px solid var(--neon);
-            padding-bottom: 1vh;
-            margin-bottom: 2vh;
+            border-bottom: 2px solid var(--matrix-green);
+            padding-bottom: 1rem;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
-        h1 { margin: 0; font-size: 1.5rem; letter-spacing: 2px; }
-        .subtitle { color: #fff; font-size: 0.9rem; }
+        .brand h1 {
+            font-size: 2.5rem;
+            text-shadow: var(--phosphor-bloom);
+            margin-bottom: 0.5rem;
+        }
 
-        /* Main Split Layout */
-        .grid-container {
+        .brand .subtitle {
+            font-size: 0.8rem;
+            background: var(--matrix-green);
+            color: var(--matrix-black);
+            padding: 2px 8px;
+            font-weight: bold;
+        }
+
+        .system-status {
+            text-align: right;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        /* --- MAIN DASHBOARD --- */
+        main {
             display: grid;
-            grid-template-columns: 1fr 1.2fr; /* Right side slightly wider for matrix */
-            gap: 2vw;
-            flex-grow: 1;
-            height: 100%;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
         }
 
-        /* Panels */
-        .panel {
+        @media (max-width: 800px) {
+            main { grid-template-columns: 1fr; }
+        }
+
+        /* --- TERMINAL WINDOW --- */
+        .terminal-window {
+            border: 1px solid var(--matrix-green);
+            background: rgba(0, 20, 0, 0.6);
+            padding: 1rem;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+            position: relative;
+        }
+
+        .terminal-window::before {
+            content: ">> ROOT ACCESS // CURE.SH";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: var(--matrix-black);
+            padding: 0 10px;
+            font-size: 0.8rem;
+            color: var(--matrix-green);
+            font-weight: bold;
+        }
+
+        .terminal-content {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        .prompt { color: var(--matrix-bright); margin-right: 10px; }
+        .cmd { color: var(--matrix-green); }
+        .output { color: #aaffaa; opacity: 0.9; margin-bottom: 1rem; display: block; }
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background: var(--matrix-green);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+        }
+
+        /* --- DATA MODULES --- */
+        .data-module {
+            border: 1px solid var(--matrix-dim);
+            padding: 0;
             display: flex;
             flex-direction: column;
         }
 
-        h2 { 
-            color: #fff; 
-            border-bottom: 1px dashed var(--border);
-            padding-bottom: 5px;
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
+        .module-header {
+            background: var(--matrix-dim);
+            color: var(--matrix-green);
+            padding: 0.5rem;
+            font-weight: bold;
+            border-bottom: 1px solid var(--matrix-green);
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+            transition: background 0.2s;
+        }
+
+        .stat-row:hover {
+            background: rgba(0, 255, 65, 0.1);
+            cursor: crosshair;
+        }
+
+        .stat-label { opacity: 0.8; }
+        .stat-value { font-weight: bold; text-shadow: 0 0 5px var(--matrix-green); }
+
+        .warning-box {
+            border: 1px solid var(--matrix-green);
+            padding: 1rem;
+            margin-top: 1rem;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(0,0,0,0),
+                rgba(0,0,0,0) 10px,
+                rgba(0, 255, 65, 0.05) 10px,
+                rgba(0, 255, 65, 0.05) 20px
+            );
+        }
+
+        .warning-title {
+            color: var(--matrix-bright);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
             text-transform: uppercase;
         }
 
-        /* Content Elements */
-        .cmd { 
-            color: #fff; 
-            background: #111; 
-            padding: 12px; 
-            border-left: 3px solid var(--neon);
-            font-weight: bold;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
+        /* --- FOOTER --- */
+        footer {
+            border-top: 1px solid var(--matrix-green);
+            padding-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            opacity: 0.7;
         }
 
-        ul { padding-left: 15px; margin: 0; }
-        li { margin-bottom: 12px; font-size: 0.85rem; line-height: 1.3; }
-        
-        strong { color: #fff; }
-        
-        .subtext { 
-            color: var(--subtext); 
-            font-size: 0.8em; 
-            display: block; 
-            margin-top: 3px;
-            font-style: italic;
+        .nav-link {
+            color: var(--matrix-green);
+            text-decoration: none;
+            margin-left: 2rem;
+            position: relative;
         }
 
-        /* The Matrix Box */
-        .matrix-box {
-            border: 1px solid var(--border);
-            background: var(--panel-bg);
-            padding: 15px;
-            flex-grow: 1; /* Fill remaining vertical space */
-            overflow-y: auto;
+        .nav-link:hover {
+            background: var(--matrix-green);
+            color: var(--matrix-black);
+            box-shadow: var(--phosphor-bloom);
         }
 
-        .highlight { color: var(--highlight); }
-
-        /* Footer / Integrity Section at bottom of Left Panel */
-        .integrity-footer {
-            margin-top: auto; /* Push to bottom */
-            border-top: 1px dashed var(--border);
-            padding-top: 15px;
+        .nav-link::before {
+            content: "["; margin-right: 5px; opacity: 0; transition: opacity 0.2s;
         }
-        
-        p { margin: 5px 0 10px 0; font-size: 0.85rem; color: #ccc;}
+        .nav-link::after {
+            content: "]"; margin-left: 5px; opacity: 0; transition: opacity 0.2s;
+        }
+        .nav-link:hover::before, .nav-link:hover::after { opacity: 1; }
+
+        /* --- ANIMATIONS --- */
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -10%; }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 0.95; }
+            10% { opacity: 0.9; }
+            15% { opacity: 0.95; }
+            20% { opacity: 0.99; }
+            100% { opacity: 0.94; }
+        }
+
+        /* --- GLITCH EFFECT ON HOVER --- */
+        .glitch-hover:hover {
+            animation: glitch-anim 0.3s infinite;
+            color: var(--matrix-bright);
+        }
+
+        @keyframes glitch-anim {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
 
     </style>
 </head>
 <body>
 
-    <header>
-        <div>
-            <h1>CI5.HOST // AUDIT_NODE</h1>
-            <span class="subtitle">Forensic Gateway & Threat Lab</span>
-        </div>
-        <div style="text-align: right; font-size: 0.8rem; color: #fff;">
-            STATUS: <span style="color:var(--neon)">ACTIVE</span><br>
-            SECURE_BOOT: ENABLED
-        </div>
-    </header>
+    <div class="scanline"></div>
+    <div class="crt-overlay"></div>
 
-    <div class="grid-container">
+    <div class="container">
         
-        <section class="panel">
-            <code class="cmd">curl ci5.host/audit | sh -s [cork-name]</code>
-
-            <h2>1. The "CURE" Protocol (Static)</h2>
-            <p>Mandatory autopsy for all registry submissions.</p>
-
-            <ul>
-                <li>
-                    <strong>Filesystem Mirage (OverlayFS):</strong>
-                    <br>
-                    Corks write to a <code>tmpfs</code> RAM overlay.
-                    <span class="subtext">Persistence is impossible; modifications vanish on exit.</span>
-                </li>
-                <li>
-                    <strong>Syscall Panopticon (Seccomp):</strong>
-                    <br>
-                    Privileged vectors (<code>ptrace</code>, <code>mount</code>) are flagged.
-                    <span class="subtext">Zero-tolerance policy for kernel interaction.</span>
-                </li>
-            </ul>
-
-            <div class="integrity-footer">
-                <h2>System Integrity</h2>
-                <p style="color: #666; font-size: 0.741rem;">
-                   The 'Ci5' architecture assumes a <strong>Zero Trust</strong> posture. Any code introduced is subject to sandboxing, packet inspection, and behavioral analysis. Identification precedes execution.
-                </p>
+        <header>
+            <div class="brand">
+                <h1 class="glitch-hover">ci5.host</h1>
+                <div class="subtitle">PROTOCOL: I.C.U.P. // ACTIVE</div>
             </div>
-        </section>
-
-        <section class="panel">
-            <h2>2. The "Full Stack" Standard (Active)</h2>
-            <p>The hostile environment awaiting the payload.</p>
-
-            <div class="matrix-box">
-                <ul>
-                    <li>
-                        <span class="highlight">SURICATA (IDS/IPS):</span>
-                        <br><strong>Hyperscan DPI & Stream Reassembly.</strong>
-                        <span class="subtext"> Inspects payloads against 60k+ Emerging Threats signatures. C2 handshakes detected regardless of port.</span>
-                    </li>
-                    
-                    <li>
-                        <span class="highlight">CROWDSEC (Hive Mind):</span>
-                        <br><strong>Collaborative Behavioral Blocking.</strong>
-                        <span class="subtext">Aggression on one node triggers a global network-wide IP ban.</span>
-                    </li>
-
-                    <li>
-                        <span class="highlight">NTOPNG (Layer-7):</span>
-                        <br><strong>Flow-based Visualization.</strong>
-                        <span class="subtext">All socket connections logged and categorized. No hidden channels.</span>
-                    </li>
-                    
-                    <li>
-                        <span class="highlight">DNS LOCKDOWN:</span>
-                        <br><strong>Recursive Resolution Control.</strong>
-                        <span class="subtext">Known tracking/malware domains and DGA algorithms are null-routed locally.</span>
-                    </li>
-                </ul>
+            <div class="system-status">
+                <div>SYSTEM_INTEGRITY: 100%</div>
+                <div>NET_SOVEREIGNTY: ENFORCED</div>
+                <div>UPTIME: FOREVER</div>
             </div>
-        </section>
+        </header>
+
+        <main>
+            <section class="terminal-section">
+                <div class="terminal-window">
+                    <div class="terminal-content">
+                        <div><span class="prompt">root@ci5:~#</span><span class="cmd">curl ci5.host/audit | sh -s cork-ntopng</span></div>
+                        <div class="output">
+--- [Ci5 AUDIT: CURE MODE] ---
+ID: a1b2c3d4e5f6 | Host: ext4-Sovereign
+
+[*] Shadow-Mount initialized. 
+[*] Host /etc is now protected (OverlayFS).
+--- SUBJECT IS LIVE IN SHADOW-NET ---
+Monitoring for 30 seconds...
+..............................
+
+--- [TANGIBLE CHANGE REPORT] ---
+[Host Breakout Attempts]
+ > CLEAN: No host configuration changes detected.
+
+--- [AUDIT COMPLETE] ---
+Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span>
+                        </div>
+                        <div><span class="prompt">root@ci5:~#</span><span class="cmd">_</span><span class="cursor"></span></div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <div class="warning-title">>> REALITY CONSENSUS OVERRIDE</div>
+                    <p>
+                        STANDARD ISP ROUTERS ARE BLACK BOXES DESIGNED FOR OPACITY. 
+                        Ci5 IS A GLASS FORTRESS. 
+                        WE DO NOT TRUST CODE. WE EXECUTE IT IN A CAGE AND WATCH IT BLEED.
+                    </p>
+                </div>
+            </section>
+
+            <aside class="data-module">
+                <div class="module-header">SUB-ROUTINE STATUS</div>
+                
+                <div class="stat-row">
+                    <span class="stat-label">Intrusion Detection</span>
+                    <span class="stat-value">SURICATA [FULL]</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Packet Inspection</span>
+                    <span class="stat-value">DEEP // ACTIVE</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Traffic Analysis</span>
+                    <span class="stat-value">NTOPNG // L7</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Threat Intel</span>
+                    <span class="stat-value">CROWDSEC // GLOBAL</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Audit Engine</span>
+                    <span class="stat-value">C.U.R.E. // RAM</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Kill Switch</span>
+                    <span class="stat-value">I.C.U.P. // READY</span>
+                </div>
+            </aside>
+        </main>
+
+        <footer>
+            <div class="footer-id">ci5.host | v7.4-RC-1 | NO_SYSTEM_IS_SAFE</div>
+            <nav>
+                <a href="https://ci5.run" class="nav-link">RUN</a>
+                <a href="https://ci5.dev" class="nav-link">DEV</a>
+                <a href="https://ci5.network" class="nav-link">NET</a>
+            </nav>
+        </footer>
 
     </div>
 
