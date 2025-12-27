@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" type="image/png" href="https://ci5.host/static/host.png">
     <title>ci5.host</title>
     <style>
@@ -14,13 +16,17 @@
             --matrix-green: rgb(47, 207, 47);
             --matrix-bright: #ccffcc;
             --alert-red: #ff3333;
-            
             --phosphor-bloom: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 20px rgba(0, 255, 65, 0.4);
         }
 
         /* --- RESET & BASE --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
+        html {
+            overflow-x: hidden;
+            width: 100%;
+        }
+
         body {
             background-color: var(--matrix-black);
             color: var(--matrix-green);
@@ -28,10 +34,10 @@
             font-size: 14px;
             line-height: 1.4;
             overflow-x: hidden;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
+            min-height: 100vh;
+            min-height: 100dvh;
+            width: 100%;
+            max-width: 100vw;
         }
 
         /* --- CRT EFFECT LAYER --- */
@@ -45,39 +51,24 @@
             animation: flicker 0.15s infinite;
         }
 
-        .crt-overlay::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: rgba(18, 16, 16, 0.1);
-            opacity: 0;
-            z-index: 2;
-            pointer-events: none;
-            animation: flicker 0.15s infinite;
-        }
-
         .scanline {
             width: 100%;
             height: 100px;
             z-index: 998;
             background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 65, 0.04) 50%, rgba(0,0,0,0) 100%);
             opacity: 0.1;
-            position: absolute;
+            position: fixed;
             bottom: 100%;
             animation: scanline 10s linear infinite;
             pointer-events: none;
         }
 
-        /* --- LAYOUT GRID --- */
+        /* --- LAYOUT --- */
         .container {
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
-            flex: 1;
-            display: grid;
-            grid-template-rows: auto 1fr auto;
-            gap: 2rem;
+            padding: 1rem;
             position: relative;
             z-index: 10;
         }
@@ -86,32 +77,33 @@
         header {
             border-bottom: 2px solid var(--matrix-green);
             padding-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            margin-bottom: 1.5rem;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
         .brand h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             text-shadow: var(--phosphor-bloom);
             margin-bottom: 0.5rem;
+            word-break: break-word;
         }
 
         .brand .subtitle {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             background: var(--matrix-green);
             color: var(--matrix-black);
             padding: 2px 8px;
             font-weight: bold;
+            display: inline-block;
+            margin-bottom: 0.75rem;
         }
 
         .system-status {
             display: flex;
-            gap: 10px;
-            align-items: center; 
-            font-size: 0.67rem;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.6rem;
             opacity: 0.9;
             letter-spacing: 0.44px;
             color: rgba(255, 255, 255, 0.87);
@@ -120,198 +112,78 @@
         .system-status div {
             border: 1px solid var(--matrix-green);
             background: rgba(0, 255, 65, 0.05);
-            padding: 4px 17px;
+            padding: 4px 10px;
             text-align: center;
-            width: fit-content;
             box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);
+            white-space: nowrap;
         }
 
-        /* --- MAIN DASHBOARD --- */
+        /* --- MAIN CONTENT --- */
         main {
-            display: grid;
-            grid-template-columns: 1fr 340px;
-            gap: 2rem;
-        }
-
-        @media (max-width: 800px) {
-            main { grid-template-columns: 1fr; }
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
         }
 
         /* --- TERMINAL WINDOW --- */
-        .terminal-window {
-            border: 1px solid var(--matrix-green);
-            background: rgba(0, 20, 0, 0.6);
-            padding: 1rem;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+        .terminal-wrapper {
             position: relative;
+            margin-top: 0.5rem;
         }
 
-        .terminal-window::before {
-            content: ">> ROOT ACCESS // CURE.SH";
+        .terminal-label {
             position: absolute;
-            top: -10px;
+            top: -0.5rem;
             left: 10px;
             background: var(--matrix-black);
             padding: 0 10px;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: var(--matrix-green);
             font-weight: bold;
+            white-space: nowrap;
+            z-index: 5;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .terminal-window {
+            border: 1px solid var(--matrix-green);
+            background: rgba(0, 20, 0, 0.6);
+            padding: 1.25rem 1rem 1rem 1rem;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .terminal-content {
             font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
+            font-size: 0.75rem;
+            line-height: 1.5;
         }
 
-        .prompt { color: var(--matrix-bright); margin-right: 10px; }
-        .cmd { color: var(--matrix-green); }
-        .output { color: #aaffaa; opacity: 0.9; margin-bottom: 1rem; display: block; }
+        .prompt { color: var(--matrix-bright); margin-right: 8px; }
+        .cmd { color: var(--matrix-green); word-break: break-all; }
+        .output { 
+            color: #aaffaa; 
+            opacity: 0.9; 
+            margin: 0.75rem 0; 
+            display: block; 
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
         .cursor {
             display: inline-block;
-            width: 10px;
-            height: 1.2em;
+            width: 8px;
+            height: 1em;
             background: var(--matrix-green);
             animation: blink 1s step-end infinite;
             vertical-align: middle;
         }
 
-       /* --- DATA MODULES --- */
-        .data-module {
-            border: 1px solid var(--matrix-dim);
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; 
-            position: relative;
-            /* CRITICAL: Reserve space at the bottom for the fixed detail box */
-            padding-bottom: 150px; 
-            min-height: 400px; /* Ensure container is tall enough */
-        }
-
-        /* WATERMARK (Adjusted to sit behind the list, not the detail box) */
-        .data-module::after {
-            content: "";
-            position: absolute;
-            top: 20%;      /* Moved up to sit behind the list items */
-            left: 0;
-            right: 0;
-            height: 82%;
-            background-image: url('static/signal.png');
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-size: 222%;
-            opacity: 0.12;
-            pointer-events: none;
-            mix-blend-mode: screen;
-            z-index: 1;
-        }
-
-        .module-header {
-            background: var(--matrix-dim);
-            color: #ffffffee;
-            padding: 0.5rem;
-            font-weight: bold;
-            border-bottom: 1px solid var(--matrix-green);
-            text-transform: uppercase;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .stat-row {
-            display: flex;
-            flex-direction: column; 
-            padding: 0.8rem;
-            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
-            transition: background 0.2s;
-            cursor: help;
-            position: static; /* Static allows children to position relative to parent .data-module */
-            z-index: 2;
-        }
-
-        .stat-main {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            flex-wrap: nowrap;
-            gap: 0.5rem;
-        }
-
-        /* Hover Effect for the Row itself */
-        .stat-row:hover {
-            background: rgba(0, 255, 65, 0.15);
-            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
-        }
-
-        /* --- FIXED DETAILS PANE (The "Dedicated Space") --- */
-        .stat-details {
-            /* Positioning: Locks this box to the bottom of .data-module */
-            position: absolute; 
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 150px; /* Matches the padding-bottom of container */
-            
-            /* Styling to look like a CRT readout screen */
-            background: rgba(0, 10, 0, 0.95);
-            border-top: 2px solid var(--matrix-green);
-            padding: 1rem;
-            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.5);
-            
-            /* Hide by default */
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            
-            /* Smooth fade transition */
-            transition: opacity 0.2s ease-in, visibility 0.2s;
-            z-index: 10;
-            
-            /* Typography */
-            font-size: 0.75rem;
-            color: var(--matrix-bright);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        /* REVEAL LOGIC: When row is hovered, show its child .stat-details */
-        .stat-row:hover .stat-details {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-        }
-
-        /* Inner Content Styling */
-        .detail-line {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            font-family: monospace;
-            letter-spacing: 0.5px;
-            border-bottom: 1px dotted rgba(0, 255, 65, 0.3);
-            padding-bottom: 2px;
-        }
-        
-        .detail-block {
-            margin-top: 8px;
-            font-style: italic;
-            opacity: 0.8;
-            line-height: 1.3;
-            color: #ccffcc;
-        }
-
-        .detail-key { opacity: 0.7; color: var(--matrix-green); }
-        .detail-val { color: #ffffff; font-weight: bold; }
-
-        .stat-label { opacity: 0.741; color: rgba(155, 255, 155, 0.548); font-size: 14px; white-space: nowrap; }
-        .stat-value { font-weight: bold; text-shadow: 0 0 5px var(--matrix-green); color: #ffffff; white-space: nowrap; }
-
+        /* --- WARNING BOX --- */
         .warning-box {
             border: 1px solid rgb(174, 6, 6);
             padding: 1rem;
-            margin-top: 1rem;
             background: repeating-linear-gradient(
                 45deg,
                 rgba(0,0,0,0),
@@ -326,49 +198,175 @@
             font-weight: bold;
             margin-bottom: 0.5rem;
             text-transform: uppercase;
+            font-size: 0.8rem;
         }
 
         .warning-box p {
-            white-space: nowrap;
             line-height: 1.6;
+            font-size: 0.7rem;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .warning-box p + p {
-            margin-top: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        /* --- DATA MODULES (Status Container) --- */
+        .data-module {
+            border: 1px solid var(--matrix-dim);
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            position: relative;
+            background: rgba(0, 10, 0, 0.5);
+        }
+
+        .data-module::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('static/signal.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+            opacity: 0.08;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            z-index: 0;
+        }
+
+        .module-header {
+            background: var(--matrix-dim);
+            color: #ffffffee;
+            padding: 0.6rem 0.8rem;
+            font-weight: bold;
+            border-bottom: 1px solid var(--matrix-green);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* stat-list should NOT be position:relative so details anchor to data-module */
+        .stat-list {
+            z-index: 2;
+            position: static;
+        }
+
+        /* --- STAT ROWS --- */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+            transition: background 0.2s;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .stat-label { 
+            opacity: 0.741; 
+            color: rgba(155, 255, 155, 0.548); 
+            font-size: 0.75rem;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+        
+        .stat-value { 
+            font-weight: bold; 
+            text-shadow: 0 0 5px var(--matrix-green); 
+            color: #ffffff;
+            font-size: 0.7rem;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* --- DETAILS PANELS (Hidden by default) --- */
+        .stat-details {
+            display: none;
+            background: rgba(0, 10, 0, 0.98);
+            border-top: 2px solid var(--matrix-green);
+            padding: 1rem;
+            font-size: 0.7rem;
+            color: var(--matrix-bright);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            min-height: 120px;
+        }
+
+        .detail-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+            border-bottom: 1px dotted rgba(0, 255, 65, 0.3);
+            padding-bottom: 4px;
+            gap: 10px;
+        }
+        
+        .detail-block {
+            margin-top: 8px;
+            font-style: italic;
+            opacity: 0.8;
+            line-height: 1.4;
+            color: #ccffcc;
+        }
+
+        .detail-key { 
+            opacity: 0.7; 
+            color: var(--matrix-green);
+            flex-shrink: 0;
+        }
+        .detail-val { 
+            color: #ffffff; 
+            font-weight: bold;
+            text-align: right;
+            word-break: break-word;
         }
 
         /* --- FOOTER --- */
         footer {
             border-top: 1px solid var(--matrix-green);
-            padding-top: 1rem;
+            padding: 1rem 0;
+            margin-top: 1.5rem;
             display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            opacity: 0.33;
+            flex-direction: column;
+            gap: 0.75rem;
+            font-size: 0.7rem;
+            opacity: 0.5;
             color: rgb(29, 77, 36);
         }
 
-        .nav-link {
-            color: var(--matrix-green);
-            text-decoration: none;
-            margin-left: 2rem;
-            position: relative;
-            color: rgba(41, 146, 41, 0.664);
+        footer nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
 
-        .nav-link:hover {
+        .nav-link {
+            color: rgba(41, 146, 41, 0.664);
+            text-decoration: none;
+            padding: 4px 8px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover, .nav-link:active {
             background: var(--matrix-green);
             color: var(--matrix-black);
             box-shadow: var(--phosphor-bloom);
         }
-
-        .nav-link::before {
-            content: "["; margin-right: 5px; opacity: 0; transition: opacity 0.2s;
-        }
-        .nav-link::after {
-            content: "]"; margin-left: 5px; opacity: 0; transition: opacity 0.2s;
-        }
-        .nav-link:hover::before, .nav-link:hover::after { opacity: 1; }
 
         /* --- ANIMATIONS --- */
         @keyframes scanline {
@@ -390,7 +388,6 @@
             100% { opacity: 0.94; }
         }
 
-        /* --- GLITCH EFFECT ON HOVER --- */
         .glitch-hover:hover {
             animation: glitch-anim 0.3s infinite;
             color: var(--matrix-bright);
@@ -405,6 +402,172 @@
             100% { transform: translate(0) }
         }
 
+        /* ═══════════════════════════════════════════════════════════════
+           TABLET STYLES (600px+)
+           ═══════════════════════════════════════════════════════════════ */
+        @media (min-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .brand h1 {
+                font-size: 2.5rem;
+            }
+
+            .brand .subtitle {
+                font-size: 0.8rem;
+            }
+
+            .system-status {
+                font-size: 0.67rem;
+            }
+
+            .terminal-content {
+                font-size: 0.85rem;
+            }
+
+            .terminal-label {
+                font-size: 0.8rem;
+            }
+
+            .warning-box p {
+                font-size: 0.75rem;
+            }
+
+            .stat-label {
+                font-size: 0.85rem;
+            }
+
+            .stat-value {
+                font-size: 0.8rem;
+            }
+
+            footer {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           DESKTOP STYLES (900px+)
+           ═══════════════════════════════════════════════════════════════ */
+        @media (min-width: 900px) {
+            .container {
+                padding: 2rem;
+            }
+
+            /* Header: Brand left, Status right */
+            header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
+
+            .brand .subtitle {
+                margin-bottom: 0;
+            }
+
+            /* Move system status to header right side */
+            .system-status {
+                flex-direction: row;
+                gap: 10px;
+            }
+
+            .system-status div {
+                padding: 4px 17px;
+            }
+
+            /* Two-column grid */
+            main {
+                display: grid;
+                grid-template-columns: 1fr 340px;
+                grid-template-rows: auto auto;
+                gap: 2rem;
+            }
+
+            .terminal-section {
+                grid-column: 1;
+                grid-row: 1 / 3;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            /* Status container with space reserved for detail pane */
+            .data-module {
+                grid-column: 2;
+                grid-row: 1 / 3;
+                min-height: 500px;
+                padding-bottom: 130px;
+            }
+
+            /* Watermark positioned in middle-bottom area between rows and detail pane */
+            .data-module::after {
+                top: auto;
+                bottom: 130px;
+                height: 150px;
+                background-size: 180%;
+                background-position: center center;
+                opacity: 0.10;
+            }
+
+            .terminal-content {
+                font-size: 14px;
+            }
+
+            /* Desktop hover effect on rows */
+            .stat-row {
+                cursor: help;
+            }
+
+            .stat-row:hover {
+                background: rgba(0, 255, 65, 0.15);
+                box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
+            }
+
+            /* Desktop: Show details on hover - detail anchors to data-module bottom */
+            .stat-row:hover + .stat-details,
+            .stat-details:hover {
+                display: block;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           LARGE DESKTOP (1200px+)
+           ═══════════════════════════════════════════════════════════════ */
+        @media (min-width: 1200px) {
+            main {
+                grid-template-columns: 1fr 380px;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SAFE AREA INSETS (Notched phones)
+           ═══════════════════════════════════════════════════════════════ */
+        @supports (padding: max(0px)) {
+            .container {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+                padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TOUCH OPTIMIZATIONS
+           ═══════════════════════════════════════════════════════════════ */
+        @media (hover: none) and (pointer: coarse) {
+            .stat-row {
+                min-height: 48px;
+            }
+
+            .nav-link {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -416,7 +579,7 @@
         
         <header>
             <div class="brand">
-                <h1 class="glitch-hover">ci5.host</h1>
+                <h1 class="glitch-hover">CI5.HOST</h1>
                 <div class="subtitle">PROTOCOL: I.C.U.P. // ACTIVE</div>
             </div>
             <div class="system-status">
@@ -427,14 +590,16 @@
 
         <main>
             <section class="terminal-section">
-                <div class="terminal-window">
-                    <div class="terminal-content">
-                        <div><span class="prompt">root@ci5:~#</span><span class="cmd">curl ci5.host/audit | sh -s cork-ntopng</span></div>
-                        <div class="output">
+                <div class="terminal-wrapper">
+                    <span class="terminal-label">>> ROOT ACCESS // CURE.SH</span>
+                    <div class="terminal-window">
+                        <div class="terminal-content">
+                            <div><span class="prompt">root@ci5:~#</span><span class="cmd">curl ci5.host/audit | sh -s cork-ntopng</span></div>
+                            <div class="output">
 --- [Ci5 AUDIT: CURE MODE] ---
 ID: a1b2c3d4e5f6 | Host: ext4-Sovereign
 
-[*] Shadow-Mount initialized. 
+[*] Shadow-Mount initialized.
 [*] Host /etc is now protected (OverlayFS).
 --- SUBJECT IS LIVE IN SHADOW-NET ---
 Monitoring for 30 seconds...
@@ -446,37 +611,36 @@ Monitoring for 30 seconds...
 
 --- [AUDIT COMPLETE] ---
 Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span>
+                            </div>
+                            <div><span class="prompt">root@ci5:~#</span><span class="cursor"></span></div>
                         </div>
-                        <div><span class="prompt">root@ci5:~#</span><span class="cmd">_</span><span class="cursor"></span></div>
                     </div>
                 </div>
 
                 <div class="warning-box">
                     <div class="warning-title">>> REALITY CONSENSUS OVERRIDE</div>
                     <p>ISP ROUTERS ARE BLACK BOXES DESIGNED FOR OPACITY. Ci5 IS A GLASS FORTRESS. DO NOT TRUST CODE.</p>
-                    <p>EXECUTE IN CAGE ⇨ LISTEN FOR SC2EAMS BACK HOME ⇨ REPORT WHEN IT DOES ⇨ HOME WON'T CALL AGAIN.</p>
+                    <p>EXECUTE IN CAGE ⇨ LISTEN FOR SCREAMS BACK HOME ⇨ REPORT WHEN IT DOES ⇨ HOME WON'T CALL AGAIN.</p>
                 </div>
             </section>
 
             <aside class="data-module">
                 <div class="module-header">SUB-ROUTINE STATUS</div>
                 
-                <div class="stat-row">
-                    <div class="stat-main">
+                <div class="stat-list">
+                    <div class="stat-row">
                         <span class="stat-label">Intrusion Detection</span>
                         <span class="stat-value">SURICATA [ACTIVE]</span>
                     </div>
                     <div class="stat-details">
                         <div class="detail-line"><span class="detail-key">RULES:</span> <span class="detail-val">28,401 SIGNATURES</span></div>
-                        <div class="detail-line"><span class="detail-key">ACTION:</span> <span class="detail-val">MALICE_SIGNAL → POLICY_ENFORCED</span></div>
+                        <div class="detail-line"><span class="detail-key">ACTION:</span> <span class="detail-val">MALICE_SIGNAL + POLICY_ENFORCED</span></div>
                         <div class="detail-block">
                             >> Inspects traffic streams and protocol behavior against exploit signatures. Policed upon match.
                         </div>
                     </div>
-                </div>
 
-                <div class="stat-row">
-                    <div class="stat-main">
+                    <div class="stat-row">
                         <span class="stat-label">Packet Inspection</span>
                         <span class="stat-value">DEEP // ACTIVE</span>
                     </div>
@@ -487,10 +651,8 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
                             >> Unpacks packet headers to analyze application logic, detecting hidden tunnels & C2 channels.
                         </div>
                     </div>
-                </div>
 
-                <div class="stat-row">
-                    <div class="stat-main">
+                    <div class="stat-row">
                         <span class="stat-label">Traffic Analysis</span>
                         <span class="stat-value">NTOPNG // L7</span>
                     </div>
@@ -501,10 +663,8 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
                             >> Real-time visualization of bandwidth consumers. Identifies devices & protocols by behavior.
                         </div>
                     </div>
-                </div>
 
-                <div class="stat-row">
-                    <div class="stat-main">
+                    <div class="stat-row">
                         <span class="stat-label">Threat Intel</span>
                         <span class="stat-value">CROWDSEC // GLOBAL</span>
                     </div>
@@ -515,10 +675,8 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
                             >> Ingests global attack signals. Blocks IPs reported by other nodes before they touch your WAN.
                         </div>
                     </div>
-                </div>
 
-                <div class="stat-row">
-                    <div class="stat-main">
+                    <div class="stat-row">
                         <span class="stat-label">Audit Engine</span>
                         <span class="stat-value">C.U.R.E. // RAM</span>
                     </div>
@@ -529,10 +687,8 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
                             >> Creates ephemeral RAM layer over /etc. If Cork writes to it, intent is flagged as malicious.
                         </div>
                     </div>
-                </div>
 
-                <div class="stat-row">
-                    <div class="stat-main">
+                    <div class="stat-row">
                         <span class="stat-label">Kill Switch</span>
                         <span class="stat-value">I.C.U.P. // READY</span>
                     </div>
