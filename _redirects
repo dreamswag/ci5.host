@@ -5,18 +5,23 @@
 # This isolation ensures audit integrity even if ci5.run is compromised
 # ══════════════════════════════════════════════════════════════════════════════
 
-# All commands serve stub.sh for verification
-/               /stub.sh    200
+# Homepage - serve the web UI for browsers
+/               /index.html     200
+
+# stub.sh direct access
+/stub.sh        /stub.sh        200
+
+# Audit commands - serve stub.sh for signature verification
 /audit          /stub.sh    200
 /baseline       /stub.sh    200
 /integrity      /stub.sh    200
 /manifest       /stub.sh    200
 
-# Raw access (for ci5.run integration)
+# Raw access (for ci5.run integration - direct script download)
 /raw/*          https://raw.githubusercontent.com/dreamswag/ci5.host/main/:splat    302
 
 # Static assets
 /static/*       /static/:splat    200
 
-# Fallback
-/*              /stub.sh    200
+# Fallback - unknown paths show UI
+/*              /index.html     200

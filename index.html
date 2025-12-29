@@ -118,6 +118,12 @@
             white-space: nowrap;
         }
 
+        .system-status .isolated {
+            border-color: var(--alert-red);
+            background: rgba(255, 51, 51, 0.1);
+            color: #ffaaaa;
+        }
+
         /* --- MAIN CONTENT --- */
         main {
             display: flex;
@@ -178,6 +184,38 @@
             background: var(--matrix-green);
             animation: blink 1s step-end infinite;
             vertical-align: middle;
+        }
+
+        /* --- COMMAND LIST --- */
+        .cmd-list {
+            margin-top: 1rem;
+        }
+
+        .cmd-entry {
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            background: rgba(0, 20, 0, 0.4);
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .cmd-entry:hover {
+            border-color: var(--matrix-green);
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .cmd-entry code {
+            color: var(--matrix-green);
+            font-size: 0.8rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .cmd-entry .desc {
+            color: #668866;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* --- WARNING BOX --- */
@@ -286,6 +324,11 @@
             font-size: 0.7rem;
             text-align: right;
             flex-shrink: 0;
+        }
+
+        .stat-value.isolated {
+            color: #ffaaaa;
+            text-shadow: 0 0 5px var(--alert-red);
         }
 
         /* --- DETAILS PANELS (Hidden by default) --- */
@@ -580,123 +623,143 @@
         <header>
             <div class="brand">
                 <h1 class="glitch-hover">CI5.HOST</h1>
-                <div class="subtitle">PROTOCOL: I.C.U.P. // ACTIVE</div>
+                <div class="subtitle">ISOLATED SECURITY AUDIT // ACTIVE</div>
             </div>
             <div class="system-status">
-                <div>NET_CORRECTIONAL: TRUE</div>
-                <div>SYSTEM_UPTIME: 498D</div>
+                <div class="isolated">SIGNING_KEY: INDEPENDENT</div>
+                <div>TRUST_CHAIN: ISOLATED</div>
             </div>
         </header>
 
         <main>
             <section class="terminal-section">
                 <div class="terminal-wrapper">
-                    <span class="terminal-label">>> ROOT ACCESS // CURE.SH</span>
+                    <span class="terminal-label">>> ROOT ACCESS // AUDIT.SH</span>
                     <div class="terminal-window">
                         <div class="terminal-content">
-                            <div><span class="prompt">root@ci5:~#</span><span class="cmd">curl ci5.host/audit | sh -s cork-ntopng</span></div>
+                            <div><span class="prompt">root@ci5:~#</span><span class="cmd">curl -sL ci5.host | sh</span></div>
                             <div class="output">
---- [Ci5 AUDIT: CURE MODE] ---
-ID: a1b2c3d4e5f6 | Host: ext4-Sovereign
+═══ FULL SYSTEM SECURITY AUDIT ═══
 
-[*] Shadow-Mount initialized.
-[*] Host /etc is now protected (OverlayFS).
---- SUBJECT IS LIVE IN SHADOW-NET ---
-Monitoring for 30 seconds...
-..............................
+Checking for rootkits... <span style="color: var(--matrix-bright);">OK</span>
+Checking SUID/SGID files... <span style="color: var(--matrix-bright);">OK (42 files)</span>
+Checking network connections... <span style="color: var(--matrix-bright);">OK</span>
+Checking SSH keys... <span style="color: var(--matrix-bright);">OK (2 keys)</span>
+Checking Docker security... <span style="color: var(--matrix-bright);">OK</span>
+Checking file permissions... <span style="color: var(--matrix-bright);">OK</span>
 
---- [TANGIBLE CHANGE REPORT] ---
-[Host Breakout Attempts]
- > CLEAN: No host configuration changes detected.
+==========================================
+Errors:   0
+Warnings: 0
+==========================================
 
---- [AUDIT COMPLETE] ---
-Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span>
+[✓] Report saved: /etc/ci5/audit/report-20241229.txt
                             </div>
                             <div><span class="prompt">root@ci5:~#</span><span class="cursor"></span></div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Command List -->
+                <div class="cmd-list">
+                    <div class="cmd-entry">
+                        <code>curl -sL ci5.host | sh</code>
+                        <span class="desc">Full system security audit — rootkits, processes, integrity</span>
+                    </div>
+                    <div class="cmd-entry">
+                        <code>curl -sL ci5.host | sh -s baseline</code>
+                        <span class="desc">Create system baseline snapshot before CI5 installation</span>
+                    </div>
+                    <div class="cmd-entry">
+                        <code>curl -sL ci5.host | sh -s integrity</code>
+                        <span class="desc">Check file integrity against security manifests</span>
+                    </div>
+                    <div class="cmd-entry">
+                        <code>curl -sL ci5.host | sh -s integrity mullvad</code>
+                        <span class="desc">Check integrity of specific cork installation</span>
+                    </div>
+                </div>
+
                 <div class="warning-box">
-                    <div class="warning-title">>> REALITY CONSENSUS OVERRIDE</div>
-                    <p>ISP ROUTERS ARE BLACK BOXES DESIGNED FOR OPACITY. Ci5 IS A GLASS FORTRESS. DO NOT TRUST CODE.</p>
-                    <p>EXECUTE IN CAGE ⇨ LISTEN FOR SCREAMS BACK HOME ⇨ REPORT WHEN IT DOES ⇨ HOME WON'T CALL AGAIN.</p>
+                    <div class="warning-title">>> SECURITY ISOLATION NOTICE</div>
+                    <p>THIS AUDIT SYSTEM USES A <span style="color: var(--alert-red);">SEPARATE SIGNING KEY</span> FROM CI5.RUN. COMPROMISE OF CI5.RUN DOES NOT COMPROMISE AUDIT INTEGRITY.</p>
+                    <p>TRUST NOTHING ⇨ VERIFY EVERYTHING ⇨ AUDIT DETECTS TAMPERING ⇨ EVEN IF INSTALLER IS COMPROMISED.</p>
                 </div>
             </section>
 
             <aside class="data-module">
-                <div class="module-header">SUB-ROUTINE STATUS</div>
+                <div class="module-header">AUDIT CAPABILITIES</div>
                 
                 <div class="stat-list">
                     <div class="stat-row">
-                        <span class="stat-label">Intrusion Detection</span>
-                        <span class="stat-value">SURICATA [ACTIVE]</span>
+                        <span class="stat-label">Pre-Install Scan</span>
+                        <span class="stat-value">AUTOMATIC</span>
                     </div>
                     <div class="stat-details">
-                        <div class="detail-line"><span class="detail-key">RULES:</span> <span class="detail-val">28,401 SIGNATURES</span></div>
-                        <div class="detail-line"><span class="detail-key">ACTION:</span> <span class="detail-val">MALICE_SIGNAL + POLICY_ENFORCED</span></div>
+                        <div class="detail-line"><span class="detail-key">TRIGGER:</span> <span class="detail-val">CI5.RUN INSTALL</span></div>
+                        <div class="detail-line"><span class="detail-key">CHECKS:</span> <span class="detail-val">ROOTKITS, MINERS, SHELLS</span></div>
                         <div class="detail-block">
-                            >> Inspects traffic streams and protocol behavior against exploit signatures. Policed upon match.
+                            >> Automatically invoked before any cork installation. Captures baseline state and scans for existing threats.
                         </div>
                     </div>
 
                     <div class="stat-row">
-                        <span class="stat-label">Packet Inspection</span>
-                        <span class="stat-value">DEEP // ACTIVE</span>
+                        <span class="stat-label">Post-Install Manifest</span>
+                        <span class="stat-value">SHA256 // TRACKED</span>
                     </div>
                     <div class="stat-details">
-                        <div class="detail-line"><span class="detail-key">SCOPE:</span> <span class="detail-val">LAYER 7 (APP)</span></div>
-                        <div class="detail-line"><span class="detail-key">METHOD:</span> <span class="detail-val">HEADER_DECAP</span></div>
+                        <div class="detail-line"><span class="detail-key">SCOPE:</span> <span class="detail-val">ALL CORK FILES</span></div>
+                        <div class="detail-line"><span class="detail-key">METHOD:</span> <span class="detail-val">CRYPTOGRAPHIC HASH</span></div>
                         <div class="detail-block">
-                            >> Unpacks packet headers to analyze application logic, detecting hidden tunnels & C2 channels.
+                            >> Generates security manifest after install. Every file hashed for future integrity verification.
                         </div>
                     </div>
 
                     <div class="stat-row">
-                        <span class="stat-label">Traffic Analysis</span>
-                        <span class="stat-value">NTOPNG // L7</span>
+                        <span class="stat-label">Integrity Verification</span>
+                        <span class="stat-value">HASH_DIFF // LIVE</span>
                     </div>
                     <div class="stat-details">
-                        <div class="detail-line"><span class="detail-key">VISIBILITY:</span> <span class="detail-val">FLOW_DECODE</span></div>
-                        <div class="detail-line"><span class="detail-key">METRIC:</span> <span class="detail-val">PROTOCOL_ID</span></div>
+                        <div class="detail-line"><span class="detail-key">COMPARE:</span> <span class="detail-val">MANIFEST VS DISK</span></div>
+                        <div class="detail-line"><span class="detail-key">DETECT:</span> <span class="detail-val">MODIFICATION, DELETION</span></div>
                         <div class="detail-block">
-                            >> Real-time visualization of bandwidth consumers. Identifies devices & protocols by behavior.
+                            >> Compares current file state to known-good manifest. Detects any unauthorized changes.
                         </div>
                     </div>
 
                     <div class="stat-row">
-                        <span class="stat-label">Threat Intel</span>
-                        <span class="stat-value">CROWDSEC // GLOBAL</span>
+                        <span class="stat-label">Pure Integration</span>
+                        <span class="stat-value">UNINSTALL // CLEAN</span>
                     </div>
                     <div class="stat-details">
-                        <div class="detail-line"><span class="detail-key">SOURCE:</span> <span class="detail-val">COMMUNITY_HIVE</span></div>
-                        <div class="detail-line"><span class="detail-key">EFFECT:</span> <span class="detail-val">PRE-EMPTIVE_BAN</span></div>
+                        <div class="detail-line"><span class="detail-key">TRACK:</span> <span class="detail-val">FILES, DOCKER, SERVICES</span></div>
+                        <div class="detail-line"><span class="detail-key">RESTORE:</span> <span class="detail-val">PRE-INSTALL STATE</span></div>
                         <div class="detail-block">
-                            >> Ingests global attack signals. Blocks IPs reported by other nodes before they touch your WAN.
+                            >> State tracking enables verified uninstall via ci5 pure. Removes exactly what was added.
                         </div>
                     </div>
 
                     <div class="stat-row">
-                        <span class="stat-label">Audit Engine</span>
-                        <span class="stat-value">C.U.R.E. // RAM</span>
+                        <span class="stat-label">Key Isolation</span>
+                        <span class="stat-value isolated">INDEPENDENT</span>
                     </div>
                     <div class="stat-details">
-                        <div class="detail-line"><span class="detail-key">TECH:</span> <span class="detail-val">OVERLAYFS_DIFF</span></div>
-                        <div class="detail-line"><span class="detail-key">TRAP:</span> <span class="detail-val">WRITE_CAPTURE</span></div>
+                        <div class="detail-line"><span class="detail-key">CI5.RUN:</span> <span class="detail-val">KEY_A</span></div>
+                        <div class="detail-line"><span class="detail-key">CI5.HOST:</span> <span class="detail-val">KEY_B (DIFFERENT)</span></div>
                         <div class="detail-block">
-                            >> Creates ephemeral RAM layer over /etc. If Cork writes to it, intent is flagged as malicious.
+                            >> Separate signing keys. If ci5.run is compromised, audit system remains trusted and can detect tampering.
                         </div>
                     </div>
 
                     <div class="stat-row">
-                        <span class="stat-label">Kill Switch</span>
-                        <span class="stat-value">I.C.U.P. // READY</span>
+                        <span class="stat-label">Override Flags</span>
+                        <span class="stat-value">--accept-risk</span>
                     </div>
                     <div class="stat-details">
-                        <div class="detail-line"><span class="detail-key">TRIGGER:</span> <span class="detail-val">MANUAL / AUTO</span></div>
-                        <div class="detail-line"><span class="detail-key">EXEC:</span> <span class="detail-val">SIGKILL + PRUNE</span></div>
+                        <div class="detail-line"><span class="detail-key">--audit-warn:</span> <span class="detail-val">CONTINUE ON WARNINGS</span></div>
+                        <div class="detail-line"><span class="detail-key">--no-audit:</span> <span class="detail-val">SKIP (STILL TRACKS)</span></div>
                         <div class="detail-block">
-                            >> Instant termination of all Smart Path containers. Wipes volumes. Reverts to kernel routing only.
+                            >> Override for known false positives. State still tracked for pure even when audit skipped.
                         </div>
                     </div>
                 </div>
@@ -704,7 +767,7 @@ Result: <span style="color: var(--matrix-bright); font-weight: bold;">SAFE</span
         </main>
 
         <footer>
-            <div class="footer-id">v7.4-RC-1 | N0 R19H75 D353RV3D.</div>
+            <div class="footer-id">v8.0-RELEASE | ISOLATED TRUST ANCHOR</div>
             <nav>
                 <a href="https://ci5.run" class="nav-link">RUN</a>
                 <a href="https://ci5.dev" class="nav-link">DEV</a>
