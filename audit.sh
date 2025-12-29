@@ -1,507 +1,753 @@
 #!/bin/sh
-# 🔬 Ci5 Host Auditor (v7.4-RC-1) - "ICUP"
-# Purpose: Detect Host-Infection attempts on non-overlay filesystems.
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  CI5.HOST SECURITY AUDIT v1.0                                             ║
+# ║  https://github.com/dreamswag/ci5.host                                    ║
+# ║                                                                           ║
+# ║  Comprehensive security scanning with Pure state integration              ║
+# ║  - Pre-install baseline capture                                           ║
+# ║  - Post-install manifest generation                                       ║
+# ║  - Ongoing integrity verification                                         ║
+# ║  - Anomaly detection                                                      ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
 
 set -e
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; 
-CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; NC='\033[0m'
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+AUDIT_VERSION="1.0.0"
+CI5_DIR="/etc/ci5"
+STATE_DIR="$CI5_DIR/state"
+CORK_STATE_DIR="$STATE_DIR/corks"
+AUDIT_DIR="$CI5_DIR/audit"
+BASELINE_DIR="$AUDIT_DIR/baseline"
+MANIFESTS_DIR="$AUDIT_DIR/manifests"
+AUDIT_LOG="/var/log/ci5-audit.log"
 
-CORK_NAME=$1
-AUDIT_DURATION=${2:-30}
+# Risk categories
+RISK_ETC_CHANGES="etc-changes"
+RISK_KERNEL_MODULES="kernel-modules"
+RISK_SETUID="setuid-files"
+RISK_WORLD_WRITABLE="world-writable"
+RISK_NETWORK_LISTENERS="network-listeners"
+RISK_CRON_CHANGES="cron-changes"
+RISK_SSH_KEYS="ssh-keys"
 
-usage() {
-    echo "Usage: $0 <cork-name> [duration_seconds]"
-    echo ""
-    echo "Examples:"
-    echo "  $0 ntopng                 # Audit ntopng for 30 seconds"
-    echo "  $0 home-assistant 60      # Audit home-assistant for 60 seconds"
-    echo ""
-    echo "Options:"
-    echo "  --skip-network    Allow network access during audit (reduces security)"
-    echo "  --verbose         Show detailed syscall logs"
-    echo "  --no-cleanup      Keep audit artifacts for manual inspection"
-    exit 1
-}
-
-[ -z "$CORK_NAME" ] && usage
-
-# Parse optional flags
-SKIP_NETWORK=0
-VERBOSE=0
-NO_CLEANUP=0
-
-for arg in "$@"; do
-    case "$arg" in
-        --skip-network) SKIP_NETWORK=1 ;;
-        --verbose) VERBOSE=1 ;;
-        --no-cleanup) NO_CLEANUP=1 ;;
-    esac
-done
-
-# ─────────────────────────────────────────────────────────────
-# 1. INITIALIZE IDENTITY
-# ─────────────────────────────────────────────────────────────
-USER_ID=$(cat /proc/cpuinfo 2>/dev/null | grep Serial | awk '{print $3}' | sha256sum | cut -c1-12)
-[ -z "$USER_ID" ] && USER_ID=$(cat /etc/machine-id 2>/dev/null | sha256sum | cut -c1-12)
-[ -z "$USER_ID" ] && USER_ID="unknown"
-
-LAB_DIR="/tmp/ci5_lab_$$"
-AUDIT_LOG="/tmp/ci5_audit_${CORK_NAME}_$(date +%Y%m%d_%H%M%S).log"
-
-# Overlay directories
-UPPER_ETC="$LAB_DIR/upper_etc"
-WORK_ETC="$LAB_DIR/work_etc"
-MERGE_ETC="$LAB_DIR/merge_etc"
-
-# Additional shadow paths for /proc/sys and /sys
-UPPER_PROCSYS="$LAB_DIR/upper_procsys"
-WORK_PROCSYS="$LAB_DIR/work_procsys"
-MERGE_PROCSYS="$LAB_DIR/merge_procsys"
-
-UPPER_SYS="$LAB_DIR/upper_sys"
-WORK_SYS="$LAB_DIR/work_sys"
-MERGE_SYS="$LAB_DIR/merge_sys"
-
-# Seccomp logging
-SECCOMP_LOG="$LAB_DIR/seccomp_audit.log"
-STRACE_LOG="$LAB_DIR/strace_audit.log"
-
-echo ""
-echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║${NC}          ${MAGENTA}🔬 Ci5 ICUP AUDIT (v7.4-RC-1)${NC}                      ${CYAN}║${NC}"
-echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "   Auditor ID:    ${YELLOW}$USER_ID${NC}"
-echo -e "   Target Cork:   ${YELLOW}$CORK_NAME${NC}"
-echo -e "   Duration:      ${YELLOW}${AUDIT_DURATION}s${NC}"
-echo -e "   Network:       ${YELLOW}$([ $SKIP_NETWORK -eq 1 ] && echo "BRIDGE (Reduced Security)" || echo "NONE (Isolated)")${NC}"
-echo ""
-
-# ─────────────────────────────────────────────────────────────
-# 2. PREPARE RAM-BACKED LABORATORY
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}[1/6] Preparing RAM-backed laboratory...${NC}"
-
-cleanup() {
-    echo ""
-    echo -e "${YELLOW}[*] Cleaning up...${NC}"
-    
-    # Stop container
-    docker stop "audit_$CORK_NAME" 2>/dev/null || true
-    docker rm "audit_$CORK_NAME" 2>/dev/null || true
-    
-    # Kill strace if running
-    pkill -f "strace.*audit_$CORK_NAME" 2>/dev/null || true
-    
-    # Unmount overlays
-    umount "$MERGE_ETC" 2>/dev/null || true
-    umount "$MERGE_PROCSYS" 2>/dev/null || true
-    umount "$MERGE_SYS" 2>/dev/null || true
-    umount "$LAB_DIR" 2>/dev/null || true
-    
-    if [ $NO_CLEANUP -eq 0 ]; then
-        rm -rf "$LAB_DIR" 2>/dev/null || true
-    else
-        echo -e "   ${YELLOW}Artifacts preserved at: $LAB_DIR${NC}"
-    fi
-}
-
-trap cleanup EXIT INT TERM
-
-# Create tmpfs for the lab
-mkdir -p "$LAB_DIR"
-mount -t tmpfs tmpfs "$LAB_DIR" -o size=100M
-
-# Create overlay structure for /etc
-mkdir -p "$UPPER_ETC" "$WORK_ETC" "$MERGE_ETC"
-
-# Create overlay structure for /proc/sys and /sys
-mkdir -p "$UPPER_PROCSYS" "$WORK_PROCSYS" "$MERGE_PROCSYS"
-mkdir -p "$UPPER_SYS" "$WORK_SYS" "$MERGE_SYS"
-
-# Initialize seccomp log
-touch "$SECCOMP_LOG"
-touch "$STRACE_LOG"
-
-echo -e "   ${GREEN}✓ Overlay directories created${NC}"
-
-# ─────────────────────────────────────────────────────────────
-# 3. MOUNT THE SHADOW BONE-MARROW
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}[2/6] Mounting shadow filesystems...${NC}"
-
-# Shadow /etc - catches config modifications
-mount -t overlay overlay -o lowerdir=/etc,upperdir="$UPPER_ETC",workdir="$WORK_ETC" "$MERGE_ETC"
-echo -e "   ${GREEN}✓ Shadow /etc mounted (host protected)${NC}"
-
-# Shadow /proc/sys - catches kernel parameter manipulation
-# Note: /proc/sys is special, we can't overlay it directly
-# Instead, we'll monitor writes via strace/audit
-echo -e "   ${YELLOW}⚠ /proc/sys monitoring via syscall tracing${NC}"
-
-# Create a fake /sys overlay for detection
-# Real /sys can't be overlaid, but we can detect writes via container inspection
-echo -e "   ${YELLOW}⚠ /sys monitoring via container diff${NC}"
-
-# ─────────────────────────────────────────────────────────────
-# 4. PREPARE SECCOMP PROFILE 
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}[3/6] Preparing security monitoring...${NC}"
-
-# Create a logging seccomp profile
-cat > "$LAB_DIR/seccomp_audit.json" << 'SECCOMP'
-{
-    "defaultAction": "SCMP_ACT_LOG",
-    "syscalls": [
-        {
-            "names": [
-                "mount", "umount", "umount2", "pivot_root",
-                "ptrace", "process_vm_readv", "process_vm_writev",
-                "init_module", "finit_module", "delete_module",
-                "kexec_load", "kexec_file_load",
-                "reboot", "sethostname", "setdomainname",
-                "syslog", "acct", "settimeofday", "adjtimex",
-                "swapon", "swapoff", "quotactl",
-                "unshare", "setns",
-                "open_by_handle_at", "name_to_handle_at"
-            ],
-            "action": "SCMP_ACT_LOG"
-        },
-        {
-            "names": [
-                "read", "write", "open", "close", "stat", "fstat",
-                "lstat", "poll", "lseek", "mmap", "mprotect",
-                "munmap", "brk", "ioctl", "access", "pipe",
-                "select", "sched_yield", "mremap", "msync",
-                "mincore", "madvise", "dup", "dup2", "nanosleep",
-                "getpid", "socket", "connect", "accept", "sendto",
-                "recvfrom", "sendmsg", "recvmsg", "shutdown",
-                "bind", "listen", "getsockname", "getpeername",
-                "socketpair", "setsockopt", "getsockopt", "clone",
-                "fork", "vfork", "execve", "exit", "wait4",
-                "kill", "uname", "fcntl", "flock", "fsync",
-                "fdatasync", "truncate", "ftruncate", "getdents",
-                "getcwd", "chdir", "fchdir", "rename", "mkdir",
-                "rmdir", "creat", "link", "unlink", "symlink",
-                "readlink", "chmod", "fchmod", "chown", "fchown",
-                "lchown", "umask", "gettimeofday", "getrlimit",
-                "getrusage", "sysinfo", "times", "getuid", "getgid",
-                "setuid", "setgid", "geteuid", "getegid", "setpgid",
-                "getppid", "getpgrp", "setsid", "setreuid", "setregid",
-                "getgroups", "setgroups", "setresuid", "getresuid",
-                "setresgid", "getresgid", "getpgid", "setfsuid",
-                "setfsgid", "getsid", "capget", "capset", "rt_sigpending",
-                "rt_sigtimedwait", "rt_sigqueueinfo", "rt_sigsuspend",
-                "sigaltstack", "utime", "mknod", "uselib", "personality",
-                "statfs", "fstatfs", "getpriority", "setpriority",
-                "sched_setparam", "sched_getparam", "sched_setscheduler",
-                "sched_getscheduler", "sched_get_priority_max",
-                "sched_get_priority_min", "sched_rr_get_interval",
-                "mlock", "munlock", "mlockall", "munlockall", "vhangup",
-                "prctl", "arch_prctl", "setrlimit", "chroot", "sync",
-                "mount", "umount2", "swapon", "swapoff", "reboot",
-                "sethostname", "setdomainname", "iopl", "ioperm"
-            ],
-            "action": "SCMP_ACT_ALLOW"
-        }
-    ]
-}
-SECCOMP
-
-echo -e "   ${GREEN}✓ Seccomp audit profile created${NC}"
-
-# ─────────────────────────────────────────────────────────────
-# 5. RUN THE CORK IN THE LAB
-# ─────────────────────────────────────────────────────────────
-echo -e "${CYAN}[4/6] Launching Cork in isolated environment...${NC}"
-
-# Build Docker run command
-DOCKER_OPTS="--name audit_$CORK_NAME"
-DOCKER_OPTS="$DOCKER_OPTS -v $MERGE_ETC:/etc:rw"
-DOCKER_OPTS="$DOCKER_OPTS --security-opt seccomp=$LAB_DIR/seccomp_audit.json"
-DOCKER_OPTS="$DOCKER_OPTS --cap-drop=ALL"
-DOCKER_OPTS="$DOCKER_OPTS --cap-add=NET_BIND_SERVICE"
-
-if [ $SKIP_NETWORK -eq 0 ]; then
-    DOCKER_OPTS="$DOCKER_OPTS --network none"
-    echo -e "   ${GREEN}✓ Network isolated (--network none)${NC}"
+# Colors
+if [ -t 1 ]; then
+    R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'
+    B='\033[1m'; N='\033[0m'; M='\033[0;35m'; D='\033[0;90m'
 else
-    DOCKER_OPTS="$DOCKER_OPTS --network bridge"
-    echo -e "   ${YELLOW}⚠ Network enabled (reduced security)${NC}"
+    R=''; G=''; Y=''; C=''; B=''; N=''; M=''; D=''
 fi
 
-# Additional security restrictions
-DOCKER_OPTS="$DOCKER_OPTS --read-only"
-DOCKER_OPTS="$DOCKER_OPTS --tmpfs /tmp:rw,noexec,nosuid"
-DOCKER_OPTS="$DOCKER_OPTS --tmpfs /var/run:rw,noexec,nosuid"
-DOCKER_OPTS="$DOCKER_OPTS --pids-limit=100"
-DOCKER_OPTS="$DOCKER_OPTS --memory=512m"
-DOCKER_OPTS="$DOCKER_OPTS --cpu-shares=256"
+# ─────────────────────────────────────────────────────────────────────────────
+# UTILITIES
+# ─────────────────────────────────────────────────────────────────────────────
+die() { printf "${R}[✗] %s${N}\n" "$1" >&2; exit 1; }
+info() { printf "${G}[✓]${N} %s\n" "$1"; }
+warn() { printf "${Y}[!]${N} %s\n" "$1"; }
+fail() { printf "${R}[✗]${N} %s\n" "$1"; }
+step() { printf "\n${C}═══ %s ═══${N}\n\n" "$1"; }
 
-# Check if image exists
-if ! docker image inspect "$CORK_NAME" >/dev/null 2>&1; then
-    echo -e "   ${YELLOW}Image not found locally, pulling...${NC}"
-    if ! docker pull "$CORK_NAME" 2>/dev/null; then
-        echo -e "   ${RED}✗ Failed to pull image: $CORK_NAME${NC}"
-        exit 1
-    fi
-fi
+log() {
+    mkdir -p "$(dirname "$AUDIT_LOG")"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [$1] $2" >> "$AUDIT_LOG"
+}
 
-# Start container
-docker run -d $DOCKER_OPTS "$CORK_NAME" > /dev/null 2>&1
+init_dirs() {
+    mkdir -p "$CI5_DIR" "$STATE_DIR" "$CORK_STATE_DIR" "$AUDIT_DIR" "$BASELINE_DIR" "$MANIFESTS_DIR"
+}
 
-if [ $? -ne 0 ]; then
-    echo -e "   ${RED}✗ Failed to start container${NC}"
-    exit 1
-fi
+# Check if risk is accepted
+is_risk_accepted() {
+    local risk="$1"
+    echo "$ACCEPT_RISKS" | tr ',' '\n' | grep -q "^${risk}$"
+}
 
-echo -e "   ${GREEN}✓ Cork running in sandbox${NC}"
+# ─────────────────────────────────────────────────────────────────────────────
+# BASELINE CAPTURE
+# ─────────────────────────────────────────────────────────────────────────────
 
-if command -v strace >/dev/null 2>&1 && [ $VERBOSE -eq 1 ]; then
-    CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' "audit_$CORK_NAME" 2>/dev/null)
-    if [ -n "$CONTAINER_PID" ] && [ "$CONTAINER_PID" != "0" ]; then
-        # Monitor suspicious syscalls
-        strace -f -e trace=mount,umount,ptrace,init_module,delete_module,reboot,sethostname \
-            -p "$CONTAINER_PID" -o "$STRACE_LOG" 2>/dev/null &
-        echo -e "   ${GREEN}✓ Syscall tracing active (PID: $CONTAINER_PID)${NC}"
-    fi
-fi
-
-# ─────────────────────────────────────────────────────────────
-# 6. MONITORING PHASE
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}[5/6] Monitoring for ${AUDIT_DURATION} seconds...${NC}"
-echo -n "   "
-
-i=0
-while [ $i -lt $AUDIT_DURATION ]; do
-    sleep 1
-    i=$((i+1))
+capture_file_hashes() {
+    local output="$1"
+    local dirs="${2:-/etc /usr/local/bin /opt}"
     
-    # Progress indicator
-    if [ $((i % 5)) -eq 0 ]; then
-        printf "${GREEN}█${NC}"
-    else
-        printf "."
-    fi
+    info "Hashing system files..."
     
-    # Check container health
-    if ! docker ps | grep -q "audit_$CORK_NAME"; then
-        echo ""
-        echo -e "   ${YELLOW}⚠ Container exited early${NC}"
-        break
-    fi
-done
-echo ""
+    for dir in $dirs; do
+        [ -d "$dir" ] || continue
+        find "$dir" -type f -size -10M 2>/dev/null | while read f; do
+            local hash=$(sha256sum "$f" 2>/dev/null | awk '{print $1}')
+            local perms=$(stat -c '%a' "$f" 2>/dev/null)
+            local owner=$(stat -c '%U:%G' "$f" 2>/dev/null)
+            local size=$(stat -c '%s' "$f" 2>/dev/null)
+            echo "$hash|$perms|$owner|$size|$f"
+        done
+    done > "$output"
+    
+    local count=$(wc -l < "$output")
+    info "Captured $count file hashes"
+}
 
-# ─────────────────────────────────────────────────────────────
-# 7. THE REVEAL (Forensic Analysis)
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}[6/6] Analyzing audit results...${NC}"
-echo ""
-
-# Initialize result
-RESULT="SAFE"
-FINDINGS=""
-
-# ─────────────────────────────────────────────────────────────
-# A. Check Host /etc Modifications
-# ─────────────────────────────────────────────────────────────
-echo -e "${MAGENTA}═══ HOST BREAKOUT ANALYSIS ═══${NC}"
-echo ""
-
-ETC_BREAKOUTS=$(find "$UPPER_ETC" -type f 2>/dev/null)
-if [ -n "$ETC_BREAKOUTS" ]; then
-    echo -e "${RED}[!] HOST /etc MODIFICATION ATTEMPTS DETECTED:${NC}"
-    echo "$ETC_BREAKOUTS" | while read f; do
-        echo -e "   ${RED}• $(echo $f | sed "s|$UPPER_ETC|/etc|g")${NC}"
-    done
-    RESULT="MALICIOUS"
-    FINDINGS="$FINDINGS\n- Attempted to modify host /etc files"
-    echo ""
-else
-    echo -e "${GREEN}[✓] /etc protection: CLEAN${NC}"
-fi
-
-# ─────────────────────────────────────────────────────────────
-# B. Check Container Filesystem Changes
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${MAGENTA}═══ CONTAINER FILESYSTEM CHANGES ═══${NC}"
-echo ""
-
-CONTAINER_DIFF=$(docker diff "audit_$CORK_NAME" 2>/dev/null | head -20)
-if [ -n "$CONTAINER_DIFF" ]; then
-    echo "$CONTAINER_DIFF" | while read line; do
-        change_type=$(echo "$line" | cut -c1)
-        path=$(echo "$line" | cut -c3-)
+capture_network_state() {
+    local output="$1"
+    
+    info "Capturing network state..."
+    
+    {
+        echo "# Listening ports"
+        ss -tlnp 2>/dev/null | awk 'NR>1 {print "LISTEN|" $4 "|" $6}'
         
-        case "$change_type" in
-            A) echo -e "   ${GREEN}[ADD]${NC} $path" ;;
-            C) echo -e "   ${YELLOW}[CHG]${NC} $path" ;;
-            D) echo -e "   ${RED}[DEL]${NC} $path" ;;
-        esac
-    done
+        echo "# Established connections"
+        ss -tnp 2>/dev/null | awk 'NR>1 && /ESTAB/ {print "ESTAB|" $4 "|" $5 "|" $6}' | head -50
+        
+        echo "# Network interfaces"
+        ip -o link show 2>/dev/null | awk -F': ' '{print "IFACE|" $2}'
+        
+        echo "# iptables rule count"
+        echo "IPTABLES|$(iptables-save 2>/dev/null | wc -l)"
+        
+        echo "# nftables rule count"
+        echo "NFTABLES|$(nft list ruleset 2>/dev/null | wc -l)"
+    } > "$output"
+}
+
+capture_process_state() {
+    local output="$1"
     
-    TOTAL_CHANGES=$(docker diff "audit_$CORK_NAME" 2>/dev/null | wc -l)
-    if [ "$TOTAL_CHANGES" -gt 20 ]; then
-        echo -e "   ${YELLOW}... and $((TOTAL_CHANGES - 20)) more changes${NC}"
-    fi
-else
-    echo -e "   ${GREEN}No filesystem changes detected${NC}"
-fi
-
-# ─────────────────────────────────────────────────────────────
-# C. Check for Kernel Parameter Manipulation
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${MAGENTA}═══ KERNEL PARAMETER ANALYSIS ═══${NC}"
-echo ""
-
-# Check if container tried to mount proc or sys
-PROC_MOUNT=$(docker logs "audit_$CORK_NAME" 2>&1 | grep -i "mount.*proc\|mount.*sys" | head -5)
-if [ -n "$PROC_MOUNT" ]; then
-    echo -e "${RED}[!] SUSPICIOUS MOUNT ATTEMPTS DETECTED:${NC}"
-    echo "$PROC_MOUNT" | while read line; do
-        echo -e "   ${RED}• $line${NC}"
-    done
-    RESULT="SUSPICIOUS"
-    FINDINGS="$FINDINGS\n- Attempted to mount /proc or /sys"
-else
-    echo -e "${GREEN}[✓] No /proc or /sys mount attempts${NC}"
-fi
-
-# ─────────────────────────────────────────────────────────────
-# D. Analyze Seccomp/Syscall Logs
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${MAGENTA}═══ SYSCALL ANALYSIS ═══${NC}"
-echo ""
-
-if [ -f "$STRACE_LOG" ] && [ -s "$STRACE_LOG" ]; then
-    SUSPICIOUS_CALLS=$(grep -E "mount|ptrace|init_module|delete_module|reboot|sethostname" "$STRACE_LOG" | head -10)
-    if [ -n "$SUSPICIOUS_CALLS" ]; then
-        echo -e "${RED}[!] SUSPICIOUS SYSCALLS DETECTED:${NC}"
-        echo "$SUSPICIOUS_CALLS" | while read line; do
-            echo -e "   ${RED}• $line${NC}"
+    info "Capturing process state..."
+    
+    {
+        echo "# Running services"
+        systemctl list-units --type=service --state=running 2>/dev/null | \
+            awk '/running/ {print "SERVICE|" $1}'
+        
+        echo "# Enabled services"
+        systemctl list-unit-files --type=service --state=enabled 2>/dev/null | \
+            awk 'NR>1 && !/listed/ {print "ENABLED|" $1}'
+        
+        echo "# Docker containers"
+        if command -v docker >/dev/null 2>&1; then
+            docker ps -a --format '{{.Names}}|{{.State}}|{{.Image}}' 2>/dev/null | \
+                sed 's/^/DOCKER|/'
+        fi
+        
+        echo "# Cron jobs"
+        for user in $(cut -d: -f1 /etc/passwd 2>/dev/null); do
+            crontab -l -u "$user" 2>/dev/null | grep -v '^#' | grep -v '^$' | \
+                sed "s/^/CRON|$user|/"
         done
-        RESULT="SUSPICIOUS"
-        FINDINGS="$FINDINGS\n- Suspicious syscalls detected"
-    else
-        echo -e "${GREEN}[✓] No suspicious syscalls logged${NC}"
-    fi
-else
-    echo -e "${YELLOW}[i] Syscall tracing not available (install strace for deep analysis)${NC}"
-fi
+        
+        echo "# System cron"
+        cat /etc/crontab 2>/dev/null | grep -v '^#' | grep -v '^$' | \
+            sed 's/^/CRON|system|/'
+    } > "$output"
+}
 
-# Check dmesg for seccomp violations
-if command -v dmesg >/dev/null 2>&1; then
-    SECCOMP_VIOLATIONS=$(dmesg 2>/dev/null | tail -50 | grep -i "seccomp\|audit" | grep -i "$CORK_NAME" | head -5)
-    if [ -n "$SECCOMP_VIOLATIONS" ]; then
-        echo -e "${YELLOW}[i] Kernel audit events:${NC}"
-        echo "$SECCOMP_VIOLATIONS" | while read line; do
-            echo -e "   ${YELLOW}• $line${NC}"
+capture_security_state() {
+    local output="$1"
+    
+    info "Capturing security state..."
+    
+    {
+        echo "# SUID/SGID files"
+        find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | \
+            while read f; do
+                echo "SUID|$f|$(stat -c '%a' "$f" 2>/dev/null)"
+            done
+        
+        echo "# World-writable files in sensitive locations"
+        find /etc /usr -type f -perm -002 2>/dev/null | sed 's/^/WORLD_WRITE|/'
+        
+        echo "# SSH authorized keys"
+        find /root /home -name "authorized_keys" 2>/dev/null | while read f; do
+            wc -l < "$f" 2>/dev/null | xargs -I{} echo "SSH_KEYS|$f|{}"
         done
-    fi
-fi
+        
+        echo "# Kernel modules"
+        lsmod 2>/dev/null | awk 'NR>1 {print "KMOD|" $1}'
+        
+        echo "# Users with UID 0"
+        awk -F: '$3==0 {print "ROOT_USER|" $1}' /etc/passwd 2>/dev/null
+        
+        echo "# Recent password changes"
+        for user in $(cut -d: -f1 /etc/passwd 2>/dev/null); do
+            chage -l "$user" 2>/dev/null | grep "Last password change" | \
+                sed "s/^/PASSWD_CHANGE|$user|/"
+        done | head -20
+    } > "$output"
+}
 
-# ─────────────────────────────────────────────────────────────
-# E. Network Activity Analysis
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${MAGENTA}═══ NETWORK ANALYSIS ═══${NC}"
-echo ""
-
-if [ $SKIP_NETWORK -eq 0 ]; then
-    echo -e "${GREEN}[✓] Container was network-isolated during audit${NC}"
-    echo -e "   ${GREEN}• No outbound connections possible${NC}"
-    echo -e "   ${GREEN}• No phone-home attempts possible${NC}"
-else
-    echo -e "${YELLOW}[!] Container had network access (reduced security)${NC}"
-    # Check for network activity
-    NET_ACTIVITY=$(docker logs "audit_$CORK_NAME" 2>&1 | grep -iE "connect|http|dns|curl|wget" | head -5)
-    if [ -n "$NET_ACTIVITY" ]; then
-        echo -e "${YELLOW}[i] Network activity detected:${NC}"
-        echo "$NET_ACTIVITY" | while read line; do
-            echo -e "   ${YELLOW}• $line${NC}"
-        done
-    fi
-fi
-
-# ─────────────────────────────────────────────────────────────
-# FINAL VERDICT
-# ─────────────────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}══════════════════════════════════════════════════════════════════${NC}"
-echo ""
-
-case "$RESULT" in
-    SAFE)
-        echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║                    ✅ AUDIT RESULT: SAFE                         ║${NC}"
-        echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════╝${NC}"
-        EXIT_CODE=0
-        ;;
-    SUSPICIOUS)
-        echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${YELLOW}║                 ⚠️  AUDIT RESULT: SUSPICIOUS                      ║${NC}"
-        echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════════╝${NC}"
-        echo -e "${YELLOW}Findings:${NC}$FINDINGS"
-        EXIT_CODE=1
-        ;;
-    MALICIOUS)
-        echo -e "${RED}╔══════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${RED}║                 🚨 AUDIT RESULT: MALICIOUS                        ║${NC}"
-        echo -e "${RED}╚══════════════════════════════════════════════════════════════════╝${NC}"
-        echo -e "${RED}Findings:${NC}$FINDINGS"
-        EXIT_CODE=2
-        ;;
-esac
-
-echo ""
-
-# ─────────────────────────────────────────────────────────────
-# GENERATE AUDIT HASH FOR REGISTRY
-# ─────────────────────────────────────────────────────────────
-IMAGE_HASH=$(docker inspect "$CORK_NAME" --format='{{.Id}}' 2>/dev/null | cut -c8-19)
-AUDIT_HASH=$(echo -n "${USER_ID}${IMAGE_HASH}${RESULT}$(date +%Y%m%d)" | sha256sum | cut -c1-16)
-
-echo -e "${CYAN}Audit Metadata:${NC}"
-echo -e "   Cork:        $CORK_NAME"
-echo -e "   Image Hash:  $IMAGE_HASH"
-echo -e "   Audit Hash:  $AUDIT_HASH"
-echo -e "   Auditor ID:  $USER_ID"
-echo -e "   Date:        $(date -Iseconds)"
-echo -e "   Result:      $RESULT"
-echo ""
-
-# Output JSON for registry integration
-cat > "/tmp/ci5_audit_${CORK_NAME}.json" << EOF
+create_baseline() {
+    step "CREATING SYSTEM BASELINE"
+    
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local baseline="$BASELINE_DIR/$timestamp"
+    mkdir -p "$baseline"
+    
+    capture_file_hashes "$baseline/files.txt"
+    capture_network_state "$baseline/network.txt"
+    capture_process_state "$baseline/processes.txt"
+    capture_security_state "$baseline/security.txt"
+    
+    # Create summary
+    cat > "$baseline/summary.json" << EOF
 {
-    "cork": "$CORK_NAME",
-    "image_hash": "$IMAGE_HASH",
-    "audit_hash": "$AUDIT_HASH",
-    "auditor_id": "$USER_ID",
-    "audit_date": "$(date -Iseconds)",
-    "audit_result": "$RESULT",
-    "duration_seconds": $AUDIT_DURATION,
-    "network_isolated": $([ $SKIP_NETWORK -eq 0 ] && echo "true" || echo "false")
+    "created": "$(date -Iseconds)",
+    "hostname": "$(hostname)",
+    "kernel": "$(uname -r)",
+    "files_tracked": $(wc -l < "$baseline/files.txt"),
+    "services_running": $(grep -c "^SERVICE|" "$baseline/processes.txt" || echo 0),
+    "containers": $(grep -c "^DOCKER|" "$baseline/processes.txt" || echo 0),
+    "suid_files": $(grep -c "^SUID|" "$baseline/security.txt" || echo 0),
+    "listening_ports": $(grep -c "^LISTEN|" "$baseline/network.txt" || echo 0)
 }
 EOF
 
-echo -e "${GREEN}Audit JSON saved to: /tmp/ci5_audit_${CORK_NAME}.json${NC}"
-echo ""
+    # Link as current baseline
+    ln -sf "$baseline" "$BASELINE_DIR/current"
+    
+    info "Baseline created: $baseline"
+    log "INFO" "Baseline created: $baseline"
+}
 
-# Prompt for registry submission
-echo -n "Submit audit result to ci5.network registry? [y/N]: "
-read SUBMIT_CHOICE
+# ─────────────────────────────────────────────────────────────────────────────
+# PRE-INSTALL AUDIT
+# ─────────────────────────────────────────────────────────────────────────────
 
-if [ "$SUBMIT_CHOICE" = "y" ] || [ "$SUBMIT_CHOICE" = "Y" ]; then
-    echo -e "${CYAN}Registry submission would go to: https://ci5.network/api/audits${NC}"
-    echo -e "${YELLOW}(Submission endpoint not yet implemented)${NC}"
-fi
+pre_install_audit() {
+    local cork="$1"
+    
+    step "PRE-INSTALL AUDIT: $cork"
+    
+    local audit_dir="$CORK_STATE_DIR/$cork/audit"
+    mkdir -p "$audit_dir"
+    
+    local warnings=0
+    local errors=0
+    
+    # Capture pre-install state
+    info "Capturing pre-install security state..."
+    capture_file_hashes "$audit_dir/pre-files.txt" "/etc /opt /var/lib"
+    capture_network_state "$audit_dir/pre-network.txt"
+    capture_security_state "$audit_dir/pre-security.txt"
+    
+    # Check for existing anomalies
+    info "Checking for existing anomalies..."
+    
+    # Check for unexpected root users
+    local extra_root=$(awk -F: '$3==0 && $1!="root" {print $1}' /etc/passwd 2>/dev/null)
+    if [ -n "$extra_root" ]; then
+        fail "Found non-root users with UID 0: $extra_root"
+        errors=$((errors + 1))
+    fi
+    
+    # Check for suspicious processes
+    if pgrep -f "cryptominer\|xmrig\|minerd" >/dev/null 2>&1; then
+        fail "Potential cryptocurrency miner detected!"
+        errors=$((errors + 1))
+    fi
+    
+    # Check for reverse shells
+    if ss -tlnp 2>/dev/null | grep -qE "nc|ncat|netcat|socat"; then
+        warn "Potential reverse shell listener detected"
+        warnings=$((warnings + 1))
+    fi
+    
+    # Check disk space
+    local free_space=$(df / 2>/dev/null | awk 'NR==2 {print $4}')
+    if [ "${free_space:-0}" -lt 524288 ]; then  # 512MB
+        warn "Low disk space: ${free_space}KB available"
+        warnings=$((warnings + 1))
+    fi
+    
+    # Check system load
+    local load=$(cat /proc/loadavg 2>/dev/null | awk '{print $1}' | cut -d. -f1)
+    if [ "${load:-0}" -gt 4 ]; then
+        warn "High system load: $load"
+        warnings=$((warnings + 1))
+    fi
+    
+    # Summary
+    echo ""
+    if [ $errors -gt 0 ]; then
+        fail "Pre-install audit found $errors error(s), $warnings warning(s)"
+        log "ERROR" "Pre-install audit for $cork: $errors errors, $warnings warnings"
+        return 1
+    elif [ $warnings -gt 0 ]; then
+        warn "Pre-install audit found $warnings warning(s)"
+        log "WARN" "Pre-install audit for $cork: $warnings warnings"
+        return 0
+    else
+        info "Pre-install audit passed"
+        log "INFO" "Pre-install audit for $cork: passed"
+        return 0
+    fi
+}
 
-exit $EXIT_CODE
+# ─────────────────────────────────────────────────────────────────────────────
+# POST-INSTALL AUDIT
+# ─────────────────────────────────────────────────────────────────────────────
+
+post_install_audit() {
+    local cork="$1"
+    
+    step "POST-INSTALL AUDIT: $cork"
+    
+    local audit_dir="$CORK_STATE_DIR/$cork/audit"
+    mkdir -p "$audit_dir"
+    
+    # Capture post-install state
+    info "Capturing post-install security state..."
+    capture_file_hashes "$audit_dir/post-files.txt" "/etc /opt /var/lib"
+    capture_network_state "$audit_dir/post-network.txt"
+    capture_security_state "$audit_dir/post-security.txt"
+    
+    # Calculate changes
+    if [ -f "$audit_dir/pre-files.txt" ]; then
+        info "Calculating file changes..."
+        
+        # New files
+        comm -13 <(awk -F'|' '{print $5}' "$audit_dir/pre-files.txt" | sort) \
+                 <(awk -F'|' '{print $5}' "$audit_dir/post-files.txt" | sort) \
+            > "$audit_dir/new-files.txt"
+        
+        # Modified files (different hash)
+        awk -F'|' '{print $5 "|" $1}' "$audit_dir/pre-files.txt" | sort > /tmp/pre-hashes
+        awk -F'|' '{print $5 "|" $1}' "$audit_dir/post-files.txt" | sort > /tmp/post-hashes
+        
+        comm -13 /tmp/pre-hashes /tmp/post-hashes | cut -d'|' -f1 > "$audit_dir/modified-files.txt"
+        rm -f /tmp/pre-hashes /tmp/post-hashes
+        
+        local new_count=$(wc -l < "$audit_dir/new-files.txt")
+        local mod_count=$(wc -l < "$audit_dir/modified-files.txt")
+        
+        info "Files created: $new_count"
+        info "Files modified: $mod_count"
+    fi
+    
+    # Calculate network changes
+    if [ -f "$audit_dir/pre-network.txt" ]; then
+        info "Calculating network changes..."
+        
+        local pre_ports=$(grep "^LISTEN|" "$audit_dir/pre-network.txt" | wc -l)
+        local post_ports=$(grep "^LISTEN|" "$audit_dir/post-network.txt" | wc -l)
+        local new_ports=$((post_ports - pre_ports))
+        
+        if [ $new_ports -gt 0 ]; then
+            info "New listening ports: $new_ports"
+            comm -13 <(grep "^LISTEN|" "$audit_dir/pre-network.txt" | sort) \
+                     <(grep "^LISTEN|" "$audit_dir/post-network.txt" | sort) \
+                > "$audit_dir/new-ports.txt"
+        fi
+    fi
+    
+    log "INFO" "Post-install audit for $cork completed"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MANIFEST GENERATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+generate_manifest() {
+    local cork="$1"
+    
+    step "GENERATING SECURITY MANIFEST: $cork"
+    
+    local audit_dir="$CORK_STATE_DIR/$cork/audit"
+    local manifest="$MANIFESTS_DIR/${cork}.json"
+    
+    [ -f "$audit_dir/post-files.txt" ] || {
+        warn "No post-install audit data found"
+        return 1
+    }
+    
+    info "Building manifest..."
+    
+    # Generate JSON manifest
+    cat > "$manifest" << EOF
+{
+    "cork": "$cork",
+    "generated": "$(date -Iseconds)",
+    "version": "1.0",
+    "files": {
+EOF
+
+    # Add file hashes
+    local first=true
+    while IFS='|' read -r hash perms owner size file; do
+        [ -n "$file" ] || continue
+        if [ "$first" = "true" ]; then
+            first=false
+        else
+            echo ","
+        fi
+        printf '        "%s": {"sha256": "%s", "permissions": "%s", "owner": "%s", "size": %s}' \
+            "$file" "$hash" "$perms" "$owner" "$size"
+    done < "$audit_dir/post-files.txt" >> "$manifest"
+    
+    cat >> "$manifest" << EOF
+
+    },
+    "network": {
+        "expected_listeners": [
+EOF
+
+    # Add expected ports
+    first=true
+    grep "^LISTEN|" "$audit_dir/post-network.txt" 2>/dev/null | while IFS='|' read -r type addr proc; do
+        if [ "$first" = "true" ]; then
+            first=false
+        else
+            echo ","
+        fi
+        printf '            "%s"' "$addr"
+    done >> "$manifest"
+    
+    cat >> "$manifest" << EOF
+
+        ]
+    },
+    "services": [
+EOF
+
+    # Add services
+    first=true
+    grep "^SERVICE|" "$audit_dir/post-security.txt" 2>/dev/null | cut -d'|' -f2 | while read svc; do
+        if [ "$first" = "true" ]; then
+            first=false
+        else
+            echo ","
+        fi
+        printf '        "%s"' "$svc"
+    done >> "$manifest"
+
+    cat >> "$manifest" << EOF
+
+    ]
+}
+EOF
+
+    info "Manifest generated: $manifest"
+    
+    # Copy to cork state dir
+    cp "$manifest" "$CORK_STATE_DIR/$cork/manifest.json"
+    
+    log "INFO" "Manifest generated for $cork"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTEGRITY CHECK
+# ─────────────────────────────────────────────────────────────────────────────
+
+check_integrity() {
+    local cork="$1"
+    
+    step "INTEGRITY CHECK: ${cork:-all corks}"
+    
+    local warnings=0
+    local errors=0
+    
+    # If cork specified, check just that one
+    if [ -n "$cork" ]; then
+        local manifest="$MANIFESTS_DIR/${cork}.json"
+        if [ -f "$manifest" ]; then
+            check_cork_integrity "$cork" "$manifest"
+            return $?
+        else
+            warn "No manifest found for $cork"
+            return 1
+        fi
+    fi
+    
+    # Check all corks with manifests
+    for manifest in "$MANIFESTS_DIR"/*.json; do
+        [ -f "$manifest" ] || continue
+        local name=$(basename "$manifest" .json)
+        
+        printf "${C}Checking: %s${N}\n" "$name"
+        if ! check_cork_integrity "$name" "$manifest"; then
+            errors=$((errors + 1))
+        fi
+    done
+    
+    echo ""
+    if [ $errors -gt 0 ]; then
+        fail "Integrity check found issues in $errors cork(s)"
+        return 1
+    else
+        info "All integrity checks passed"
+        return 0
+    fi
+}
+
+check_cork_integrity() {
+    local cork="$1"
+    local manifest="$2"
+    
+    local issues=0
+    
+    # Check file hashes
+    if command -v jq >/dev/null 2>&1; then
+        jq -r '.files | to_entries[] | "\(.key)|\(.value.sha256)"' "$manifest" 2>/dev/null | \
+        while IFS='|' read -r file expected_hash; do
+            [ -f "$file" ] || {
+                warn "  Missing: $file"
+                issues=$((issues + 1))
+                continue
+            }
+            
+            local actual_hash=$(sha256sum "$file" 2>/dev/null | awk '{print $1}')
+            if [ "$actual_hash" != "$expected_hash" ]; then
+                warn "  Modified: $file"
+                issues=$((issues + 1))
+            fi
+        done
+    fi
+    
+    if [ $issues -gt 0 ]; then
+        return 1
+    else
+        info "  OK"
+        return 0
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FULL SYSTEM AUDIT
+# ─────────────────────────────────────────────────────────────────────────────
+
+full_audit() {
+    step "FULL SYSTEM SECURITY AUDIT"
+    
+    local warnings=0
+    local errors=0
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local report="$AUDIT_DIR/report-$timestamp.txt"
+    
+    {
+        echo "CI5 Security Audit Report"
+        echo "Generated: $(date)"
+        echo "Hostname: $(hostname)"
+        echo "Kernel: $(uname -r)"
+        echo "=========================================="
+        echo ""
+    } > "$report"
+    
+    # 1. Check for rootkits (basic)
+    printf "Checking for rootkits... "
+    local rootkit_found=false
+    
+    # Hidden processes
+    if [ $(ps aux 2>/dev/null | wc -l) -ne $(ls /proc 2>/dev/null | grep -c '^[0-9]') ]; then
+        warn "Hidden processes detected!"
+        rootkit_found=true
+        errors=$((errors + 1))
+    fi
+    
+    # Check /etc/ld.so.preload
+    if [ -s /etc/ld.so.preload ]; then
+        warn "ld.so.preload is not empty - potential library injection"
+        rootkit_found=true
+        warnings=$((warnings + 1))
+    fi
+    
+    [ "$rootkit_found" = "false" ] && info "OK"
+    
+    # 2. Check SUID/SGID files
+    printf "Checking SUID/SGID files... "
+    local suid_count=$(find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | wc -l)
+    if [ $suid_count -gt 50 ]; then
+        warn "Unusually high SUID/SGID count: $suid_count"
+        warnings=$((warnings + 1))
+    else
+        info "OK ($suid_count files)"
+    fi
+    
+    # 3. Check for suspicious network connections
+    printf "Checking network connections... "
+    local suspicious_conn=$(ss -tnp 2>/dev/null | grep -E ':4444|:5555|:6666|:31337' | wc -l)
+    if [ $suspicious_conn -gt 0 ]; then
+        fail "Suspicious ports detected!"
+        errors=$((errors + 1))
+    else
+        info "OK"
+    fi
+    
+    # 4. Check for unauthorized SSH keys
+    printf "Checking SSH keys... "
+    local total_keys=0
+    for keyfile in /root/.ssh/authorized_keys /home/*/.ssh/authorized_keys; do
+        [ -f "$keyfile" ] && total_keys=$((total_keys + $(wc -l < "$keyfile")))
+    done
+    if [ $total_keys -gt 10 ]; then
+        warn "Many SSH keys found: $total_keys"
+        warnings=$((warnings + 1))
+    else
+        info "OK ($total_keys keys)"
+    fi
+    
+    # 5. Check Docker security
+    if command -v docker >/dev/null 2>&1; then
+        printf "Checking Docker security... "
+        
+        # Privileged containers
+        local priv=$(docker ps --filter "label=com.docker.compose.project" --format '{{.Names}}' 2>/dev/null | \
+            xargs -I{} docker inspect {} 2>/dev/null | grep -c '"Privileged": true' || echo 0)
+        
+        if [ $priv -gt 0 ]; then
+            warn "$priv privileged container(s)"
+            warnings=$((warnings + 1))
+        else
+            info "OK"
+        fi
+    fi
+    
+    # 6. Check file permissions
+    printf "Checking file permissions... "
+    local world_writable=$(find /etc -type f -perm -002 2>/dev/null | wc -l)
+    if [ $world_writable -gt 0 ]; then
+        warn "$world_writable world-writable files in /etc"
+        warnings=$((warnings + 1))
+    else
+        info "OK"
+    fi
+    
+    # 7. Check for pending updates
+    if command -v apt-get >/dev/null 2>&1; then
+        printf "Checking for security updates... "
+        local updates=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst" || echo 0)
+        if [ $updates -gt 20 ]; then
+            warn "$updates pending updates"
+            warnings=$((warnings + 1))
+        else
+            info "OK ($updates pending)"
+        fi
+    fi
+    
+    # Summary
+    echo ""
+    echo "=========================================="
+    printf "Errors:   %d\n" $errors
+    printf "Warnings: %d\n" $warnings
+    echo "=========================================="
+    
+    {
+        echo ""
+        echo "Summary"
+        echo "======="
+        echo "Errors: $errors"
+        echo "Warnings: $warnings"
+    } >> "$report"
+    
+    info "Report saved: $report"
+    log "INFO" "Full audit completed: $errors errors, $warnings warnings"
+    
+    if [ $errors -gt 0 ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+usage() {
+    cat << 'EOF'
+CI5.HOST Security Audit v1.0
+
+USAGE:
+  audit.sh [OPTIONS] [COMMAND]
+
+COMMANDS:
+  (default)         Full system security audit
+  baseline          Create system baseline snapshot
+  integrity [cork]  Check file integrity against manifests
+  
+OPTIONS (for ci5.run integration):
+  --pre-install     Run pre-install audit for cork
+  --post-install    Run post-install audit for cork
+  --generate-manifest  Generate security manifest after install
+  --cork=NAME       Specify cork name
+  --accept=RISKS    Accept specific risk categories (comma-separated)
+
+RISK CATEGORIES:
+  etc-changes       Changes to /etc directory
+  kernel-modules    Kernel module loading
+  setuid-files      SUID/SGID file changes
+  world-writable    World-writable file changes
+  network-listeners New network listeners
+  cron-changes      Cron job modifications
+  ssh-keys          SSH key additions
+
+EXAMPLES:
+  # Full system audit
+  curl ci5.host | sh
+  
+  # Create baseline before any CI5 installation
+  curl ci5.host | sh -s baseline
+  
+  # Check integrity of specific cork
+  curl ci5.host | sh -s integrity mullvad
+  
+  # Pre-install audit (called by ci5.run stub)
+  audit.sh --pre-install --cork=adguard
+  
+  # Accept specific risks
+  audit.sh --pre-install --cork=wireguard --accept=etc-changes,kernel-modules
+EOF
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+    # Parse options
+    MODE=""
+    CORK=""
+    ACCEPT_RISKS=""
+    GENERATE_MANIFEST=false
+    
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --pre-install)      MODE="pre-install"; shift ;;
+            --post-install)     MODE="post-install"; shift ;;
+            --generate-manifest) GENERATE_MANIFEST=true; shift ;;
+            --cork=*)           CORK="${1#*=}"; shift ;;
+            --accept=*)         ACCEPT_RISKS="${1#*=}"; shift ;;
+            --help|-h)          usage; exit 0 ;;
+            baseline)           MODE="baseline"; shift ;;
+            integrity)          MODE="integrity"; shift; CORK="$1"; shift 2>/dev/null || true ;;
+            *)                  shift ;;
+        esac
+    done
+    
+    init_dirs
+    
+    case "$MODE" in
+        "pre-install")
+            [ -n "$CORK" ] || die "Cork name required for pre-install audit"
+            pre_install_audit "$CORK"
+            ;;
+        "post-install")
+            [ -n "$CORK" ] || die "Cork name required for post-install audit"
+            post_install_audit "$CORK"
+            [ "$GENERATE_MANIFEST" = "true" ] && generate_manifest "$CORK"
+            ;;
+        "baseline")
+            create_baseline
+            ;;
+        "integrity")
+            check_integrity "$CORK"
+            ;;
+        *)
+            full_audit
+            ;;
+    esac
+}
+
+main "$@"

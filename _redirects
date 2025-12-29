@@ -1,0 +1,22 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# ci5.host - Isolated Security Audit System
+# ══════════════════════════════════════════════════════════════════════════════
+# Separate repository with DIFFERENT signing key from ci5.run
+# This isolation ensures audit integrity even if ci5.run is compromised
+# ══════════════════════════════════════════════════════════════════════════════
+
+# All commands serve stub.sh for verification
+/               /stub.sh    200
+/audit          /stub.sh    200
+/baseline       /stub.sh    200
+/integrity      /stub.sh    200
+/manifest       /stub.sh    200
+
+# Raw access (for ci5.run integration)
+/raw/*          https://raw.githubusercontent.com/dreamswag/ci5.host/main/:splat    302
+
+# Static assets
+/static/*       /static/:splat    200
+
+# Fallback
+/*              /stub.sh    200

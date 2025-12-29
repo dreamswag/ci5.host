@@ -1,0 +1,33 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# CI5.HOST - HTTP Headers Configuration
+# Isolated Security Audit System
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Global security headers
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: interest-cohort=()
+  X-CI5-Component: audit-system
+  X-CI5-Isolation: independent
+
+# stub.sh - The trust anchor (no cache)
+/stub.sh
+  Cache-Control: no-store
+  Content-Type: text/plain; charset=utf-8
+
+# audit.sh - Main audit script (no cache for security)
+/audit.sh
+  Cache-Control: no-store
+  Content-Type: text/plain; charset=utf-8
+
+# Signatures - short cache
+/*.sig
+  Cache-Control: public, max-age=300
+  Content-Type: application/octet-stream
+
+# Raw scripts
+/raw/*
+  Cache-Control: no-store
+  Content-Type: text/plain; charset=utf-8
