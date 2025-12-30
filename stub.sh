@@ -1,6 +1,6 @@
 #!/bin/sh
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  CI5.HOST BOOTSTRAP STUB v1.0                                             ║
+# ║  CI5.HOST BOOTSTRAP STUB v1.1 (PATCHED)                                   ║
 # ║  https://github.com/dreamswag/ci5.host                                    ║
 # ║                                                                           ║
 # ║  ISOLATED TRUST ANCHOR FOR AUDIT SYSTEM                                   ║
@@ -12,11 +12,11 @@ set -e
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────────────
-CI5_HOST_VERSION="1.0.0"
+CI5_HOST_VERSION="1.1.0"
 CI5_HOST_RAW="https://raw.githubusercontent.com/dreamswag/ci5.host/main"
 
 # [CRITICAL] CI5.HOST Public Key - DIFFERENT from ci5.run!
-# Compromise of ci5.run keys does NOT compromise audit system
+# This key must sign audit.sh in the ci5.host repo
 CI5_HOST_PUBKEY="-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
 REPLACE_WITH_ACTUAL_CI5_HOST_KEY
@@ -60,9 +60,10 @@ download_verified() {
     
     info "Downloading $name..."
     curl -fsSL "$url" -o "$dest" || die "Failed to download $name"
-    curl -fsSL "${url}.sig" -o "${dest}.sig" 2>/dev/null || {
-        warn "No signature found for $name"
-        return 0
+    
+    # SECURITY FIX: Enforce signature presence
+    curl -fsSL "${url}.sig" -o "${dest}.sig" || {
+        die "SECURITY FAIL: Signature missing for $name. Audit requires strict verification."
     }
     
     info "Verifying $name signature..."
@@ -73,19 +74,6 @@ download_verified() {
     
     printf "${G}[✓]${N} %s verified\n" "$name"
     rm -f "${dest}.sig"
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# COMMAND RESOLVER
-# ─────────────────────────────────────────────────────────────────────────────
-resolve_command() {
-    case "$1" in
-        "audit"|"")     echo "audit.sh" ;;
-        "baseline")     echo "baseline.sh" ;;
-        "integrity")    echo "integrity.sh" ;;
-        "manifest")     echo "manifest.sh" ;;
-        *)              echo "" ;;
-    esac
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -101,7 +89,7 @@ show_menu() {
     cat << 'BANNER'
     ╔═══════════════════════════════════════════════════════════════════╗
     ║              CI5.HOST — Security Audit System                     ║
-    ║                  Isolated • Independent • Verified                ║
+    ║                 Isolated • Independent • Verified                 ║
     ╚═══════════════════════════════════════════════════════════════════╝
 BANNER
     printf "\n"
@@ -109,26 +97,22 @@ BANNER
     printf "    ${B}[2] BASELINE${N}     Create clean system baseline\n"
     printf "    ${B}[3] INTEGRITY${N}    Check file integrity vs manifest\n"
     printf "    ${B}[4] MANIFEST${N}     Generate security manifest\n\n"
-    printf "    This system uses a ${M}separate signing key${N} from ci5.run\n"
-    printf "    for security isolation.\n\n"
 }
 
 main() {
     check_requirements
     
     local cmd="${1:-audit}"
-    shift 2>/dev/null || true
     
-    local target_script=$(resolve_command "$cmd")
-    
-    if [ -z "$target_script" ]; then
-        die "Unknown command: $cmd"
-    fi
+    # LOGIC FIX: Everything maps to audit.sh because it is a monolith
+    local target_script="audit.sh"
     
     printf "${C}═══ CI5.HOST: $cmd ═══${N}\n\n"
     
-    download_verified "$cmd" "${CI5_HOST_RAW}/${target_script}" "/tmp/ci5-host-exec.sh"
+    download_verified "$target_script" "${CI5_HOST_RAW}/${target_script}" "/tmp/ci5-host-exec.sh"
     chmod +x /tmp/ci5-host-exec.sh
+    
+    # Pass all arguments to the monolith script
     exec /tmp/ci5-host-exec.sh "$@"
 }
 
