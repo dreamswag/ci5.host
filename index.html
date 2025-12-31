@@ -22,9 +22,10 @@
         /* --- RESET & BASE --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        html {
-            overflow-x: hidden;
+        html, body {
             width: 100%;
+            height: 100vh; /* Force single frame */
+            overflow: hidden; /* Prevent scrolling */
         }
 
         body {
@@ -33,11 +34,8 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px;
             line-height: 1.4;
-            overflow-x: hidden;
-            min-height: 100vh;
-            min-height: 100dvh;
-            width: 100%;
-            max-width: 100vw;
+            display: flex;
+            flex-direction: column;
         }
 
         /* --- CRT EFFECT LAYER --- */
@@ -63,554 +61,352 @@
             pointer-events: none;
         }
 
-        /* --- LAYOUT --- */
+        /* --- LAYOUT CONTAINER --- */
         .container {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 1rem;
+            padding: 1.5vh 2rem;
+            height: 100%;
             position: relative;
             z-index: 10;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* --- HEADER HUD --- */
+        /* --- HEADER --- */
         header {
             border-bottom: 2px solid var(--matrix-green);
-            padding-bottom: 1rem;
-            margin-bottom: 1.5rem;
+            padding-bottom: 1.5vh;
+            margin-bottom: 2vh;
             text-transform: uppercase;
             letter-spacing: 2px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
         }
 
         .brand h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             text-shadow: var(--phosphor-bloom);
-            margin-bottom: 0.5rem;
-            word-break: break-word;
+            margin-bottom: 0.2rem;
         }
 
         .brand .subtitle {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             background: var(--matrix-green);
             color: var(--matrix-black);
             padding: 2px 8px;
             font-weight: bold;
             display: inline-block;
-            margin-bottom: 0.75rem;
         }
 
         .system-status {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            font-size: 0.6rem;
+            gap: 10px;
+            font-size: 0.7rem;
             opacity: 0.9;
-            letter-spacing: 0.44px;
-            color: rgba(255, 255, 255, 0.87);
         }
 
         .system-status div {
             border: 1px solid var(--matrix-green);
             background: rgba(0, 255, 65, 0.05);
-            padding: 4px 10px;
-            text-align: center;
+            padding: 4px 15px;
             box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);
-            white-space: nowrap;
         }
 
-        /* --- MAIN CONTENT --- */
+        /* --- MAIN GRID --- */
         main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 550px;
+            gap: 2rem;
+            min-height: 0;
+        }
+
+        /* --- LEFT COLUMN --- */
+        .terminal-section {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1vh;
+            height: 100%;
         }
 
-        /* --- TERMINAL WINDOW --- */
         .terminal-wrapper {
             position: relative;
-            margin-top: 0.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
         }
 
         .terminal-label {
             position: absolute;
-            top: -0.5rem;
+            top: -0.6rem;
             left: 10px;
             background: var(--matrix-black);
             padding: 0 10px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: var(--matrix-green);
             font-weight: bold;
-            white-space: nowrap;
             z-index: 5;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .terminal-window {
             border: 1px solid var(--matrix-green);
             background: rgba(0, 20, 0, 0.6);
-            padding: 1.25rem 1rem 1rem 1rem;
+            padding: 1.5rem;
             box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            flex: 1;
+            overflow-y: auto;
         }
 
         .terminal-content {
             font-family: 'Courier New', monospace;
-            font-size: 0.75rem;
+            font-size: 0.9rem;
             line-height: 1.5;
         }
 
+        .output { color: #aaffaa; opacity: 0.9; margin: 1rem 0; display: block; white-space: pre-wrap; }
         .prompt { color: var(--matrix-bright); margin-right: 8px; }
-        .cmd { color: var(--matrix-green); word-break: break-all; }
-        .output { 
-            color: #aaffaa; 
-            opacity: 0.9; 
-            margin: 0.75rem 0; 
-            display: block; 
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .cursor {
-            display: inline-block;
-            width: 8px;
-            height: 1em;
-            background: var(--matrix-green);
-            animation: blink 1s step-end infinite;
-            vertical-align: middle;
-        }
+        .cursor { display: inline-block; width: 8px; height: 1em; background: var(--matrix-green); animation: blink 1s step-end infinite; vertical-align: middle; }
 
-        /* --- COMMAND LIST --- */
-        .cmd-list {
-            margin-top: 1rem;
-        }
-
-        .cmd-entry {
-            border: 1px solid rgba(0, 255, 65, 0.3);
-            background: rgba(0, 20, 0, 0.4);
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            transition: all 0.2s;
-        }
-
-        .cmd-entry:hover {
-            border-color: var(--matrix-green);
-            background: rgba(0, 255, 65, 0.1);
-        }
-
-        .cmd-entry code {
-            color: var(--matrix-green);
-            font-size: 0.8rem;
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-
-        .cmd-entry .desc {
-            color: #668866;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* --- WARNING BOX --- */
         .warning-box {
-            border: 1px solid rgb(174, 6, 6);
-            padding: 1rem;
-            background: repeating-linear-gradient(
-                45deg,
-                rgba(0,0,0,0),
-                rgba(0,0,0,0) 10px,
-                rgba(0, 255, 65, 0.05) 10px,
-                rgba(0, 255, 65, 0.05) 20px
-            );
+            background: repeating-linear-gradient(45deg, rgba(0,0,0,0), rgba(0,0,0,0) 10px, rgba(0, 255, 65, 0.05) 10px, rgba(0, 255, 65, 0.05) 20px);
+            border: 4.2px solid #7700007a;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            padding: 1.23rem;
+            flex-shrink: 0; 
+            min-height: min-content;
         }
 
-        .warning-title {
-            color: var(--matrix-bright);
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-        }
+        .warning-title { color: #ffcc00; font-weight: bold; border-bottom: 1px solid #500c00; padding-bottom: 4px; margin-bottom: 0.5rem; display: inline-block; font-size: 0.85rem; }
+        .warning-box p { font-size: 0.741rem; color: #88aa88; line-height: 1.4; white-space: normal; }
 
-        .warning-box p {
-            line-height: 1.6;
-            font-size: 0.7rem;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .warning-box p + p {
-            margin-top: 0.5rem;
-        }
-
-        /* --- DATA MODULES (Status Container) --- */
-        .data-module {
-            border: 1px solid var(--matrix-dim);
+        /* --- RIGHT COLUMN --- */
+        .sidebar-modules {
             display: flex;
             flex-direction: column;
-            overflow: visible;
-            position: relative;
-            background: rgba(0, 10, 0, 0.5);
+            height: 100%;
         }
 
+        /* --- STATUS MODULE (STEALTH + ACCENTS) --- */
+        .data-module {
+            /* Solid Black Background (Stealth Core) */
+            background-color: #000000;
+            
+            /* RESTORED: Green Edge Accents (Semi-transparent) */
+            border: 1px solid rgba(0, 255, 65, 0.4);
+            
+            /* Strong Top Accent */
+            border-top: 2px solid var(--matrix-green);
+            
+            /* ADDED: Subtle Green Glow to separate from void */
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+            
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* The Watermark (Made subtler for black background) */
         .data-module::after {
             content: "";
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 66%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 74.1%;
             background-image: url('static/signal.png');
             background-repeat: no-repeat;
             background-position: center center;
-            background-size: cover;
-            opacity: 0.08;
+            background-size: 333%;
+            opacity: 0.05; /* Reduced opacity */
             pointer-events: none;
             mix-blend-mode: screen;
             z-index: 0;
         }
 
         .module-header {
-            background: var(--matrix-dim);
-            color: #ffffffee;
-            padding: 0.6rem 0.8rem;
+            /* Black header to match body */
+            background: #000000;
+            color: var(--matrix-green); /* Green Text Accent */
+            
+            padding: 0.8rem;
             font-weight: bold;
+            
+            /* Sharp green divider */
             border-bottom: 1px solid var(--matrix-green);
+            
             text-transform: uppercase;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             letter-spacing: 1px;
-            position: relative;
+            flex-shrink: 0;
             z-index: 2;
         }
 
-        /* stat-list should NOT be position:relative so details anchor to data-module */
         .stat-list {
             z-index: 2;
-            position: static;
+            position: relative;
+            flex-shrink: 0;
         }
 
-        /* --- STAT ROWS --- */
         .stat-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.8rem;
-            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
-            transition: background 0.2s;
-            gap: 0.5rem;
+            padding: 1.74vh 1rem;
+            
+            /* Very subtle dark grey separator (Stealth look) */
+            border-bottom: 2px solid #05240169; 
+            
+            transition: all 0.2s;
+            cursor: help;
             position: relative;
-            z-index: 2;
+            background: transparent;
         }
 
-        .stat-label { 
-            opacity: 0.741; 
-            color: rgba(155, 255, 155, 0.548); 
-            font-size: 0.75rem;
-            flex-shrink: 1;
-            min-width: 0;
+        .stat-row:hover {
+            /* Dark Grey hover instead of green */
+            background: #080808; 
+            border-left: 2px solid var(--matrix-green); /* Green indicator on hover */
+            padding-left: calc(1rem - 2px); /* Prevent layout shift */
         }
+
+        /* Labels are now Grey to fade into the black */
+        .stat-label { color: #666; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px; }
         
-        .stat-value { 
-            font-weight: bold; 
-            text-shadow: 0 0 5px var(--matrix-green); 
-            color: #ffffff;
-            font-size: 0.7rem;
-            text-align: right;
-            flex-shrink: 0;
+        /* Values remain White/Bright for contrast */
+        .stat-value { font-weight: bold; color: #e0e0e0; font-size: 0.8rem; text-shadow: none; }
+        
+        /* Green glow only on the active/important text */
+        .stat-row:hover .stat-value {
+            color: #fff;
+            text-shadow: 0 0 5px var(--matrix-green);
+        }
+        .stat-row:hover .stat-label {
+            color: #aaa;
         }
 
-        /* --- DETAILS PANELS (Hidden by default) --- */
-        .stat-details {
-            display: none;
-            background: rgba(0, 10, 0, 0.98);
-            border-top: 2px solid var(--matrix-green);
-            padding: 1rem;
-            font-size: 0.7rem;
-            color: var(--matrix-bright);
+        /* --- HOVER DETAILS LOGIC --- */
+        .stat-details-wrapper {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
             z-index: 20;
-            min-height: 120px;
+            pointer-events: none;
+        }
+
+        .stat-details {
+            display: none;
+            background: #000000; /* Pure black background for readability */
+            border-top: 1px solid var(--matrix-green);
+            padding: 1.2rem;
+            min-height: 140px;
+        }
+
+        /* Scramble Box Logic */
+        .detail-default { display: block; }
+        .data-module:has(.stat-row:hover) .detail-default { display: none; }
+
+        /* Specific Detail Logic */
+        .data-module:has(.stat-row:nth-child(1):hover) .detail-1,
+        .data-module:has(.stat-row:nth-child(2):hover) .detail-2,
+        .data-module:has(.stat-row:nth-child(3):hover) .detail-3,
+        .data-module:has(.stat-row:nth-child(4):hover) .detail-4,
+        .data-module:has(.stat-row:nth-child(5):hover) .detail-5,
+        .data-module:has(.stat-row:nth-child(6):hover) .detail-6,
+        .data-module:has(.stat-row:nth-child(7):hover) .detail-7 {
+            display: block;
+            pointer-events: auto;
+            animation: flicker 0.1s;
         }
 
         .detail-line {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             font-family: monospace;
-            letter-spacing: 0.5px;
             border-bottom: 1px dotted rgba(0, 255, 65, 0.3);
             padding-bottom: 4px;
-            gap: 10px;
+            font-size: 0.75rem;
         }
-        
+
         .detail-block {
-            margin-top: 8px;
+            margin-top: 10px;
             font-style: italic;
-            opacity: 0.8;
-            line-height: 1.4;
+            opacity: 0.9;
             color: #ccffcc;
+            font-size: 0.8rem;
+            line-height: 1.4;
         }
 
-        .detail-key { 
-            opacity: 0.7; 
-            color: var(--matrix-green);
-            flex-shrink: 0;
-        }
-        .detail-val { 
-            color: #ffffff; 
-            font-weight: bold;
-            text-align: right;
-            word-break: break-word;
-        }
+        .detail-key { opacity: 0.7; color: var(--matrix-green); }
+        .detail-val { color: #ffffff; font-weight: bold; }
 
-        /* --- SIDEBAR MODULES --- */
-        .sidebar-modules {
+        /* --- COMMAND STRIP --- */
+        .command-strip {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 2px;
+            flex-shrink: 0;
+            margin: 0.42vh 0;
         }
+
+        .cmd-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.74vh 14.7px;
+            background: rgba(0, 15, 0, 0.3);
+            border-left: 2px solid rgba(0, 255, 65, 0.3);
+            transition: all 0.2s;
+            cursor: copy;
+        }
+
+        .cmd-row:hover {
+            background: rgba(0, 255, 65, 0.08);
+            border-left-color: var(--matrix-green);
+            padding-left: 18px;
+        }
+
+        .cmd-label { font-size: 0.7rem; color: #668866; text-transform: uppercase; font-weight: bold; }
+        .cmd-code { font-family: 'Courier New', monospace; font-size: 0.75rem; color: var(--matrix-bright); opacity: 0.9; }
 
         /* --- FOOTER --- */
         footer {
             border-top: 1px solid var(--matrix-green);
-            padding: 1rem 0;
-            margin-top: 1.5rem;
+            padding-top: 1.5vh;
+            margin-top: 2vh;
             display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            font-size: 0.7rem;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
             opacity: 0.5;
             color: rgb(29, 77, 36);
+            flex-shrink: 0;
         }
 
-        footer nav {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .nav-link {
-            color: rgba(41, 146, 41, 0.664);
-            text-decoration: none;
-            padding: 4px 8px;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .nav-link:hover, .nav-link:active {
-            background: var(--matrix-green);
-            color: var(--matrix-black);
-            box-shadow: var(--phosphor-bloom);
-        }
+        footer nav { display: flex; gap: 1.5rem; }
+        .nav-link { color: rgba(41, 146, 41, 0.664); text-decoration: none; padding: 4px 8px; transition: all 0.2s; }
+        .nav-link:hover { background: var(--matrix-green); color: var(--matrix-black); }
 
         /* --- ANIMATIONS --- */
-        @keyframes scanline {
-            0% { bottom: 100%; }
-            100% { bottom: -10%; }
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -10%; } }
+        @keyframes flicker { 0% { opacity: 0.97; } 100% { opacity: 0.94; } }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+        /* Mobile Responsive Fallback */
+        @media (max-width: 900px) {
+            html, body { height: auto; overflow: auto; }
+            main { grid-template-columns: 1fr; }
+            .data-module { min-height: 400px; }
+            .container { height: auto; }
         }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        @keyframes flicker {
-            0% { opacity: 0.97; }
-            5% { opacity: 0.95; }
-            10% { opacity: 0.9; }
-            15% { opacity: 0.95; }
-            20% { opacity: 0.99; }
-            100% { opacity: 0.94; }
-        }
-
-        .glitch-hover:hover {
-            animation: glitch-anim 0.3s infinite;
-            color: var(--matrix-bright);
-        }
-
-        @keyframes glitch-anim {
-            0% { transform: translate(0) }
-            20% { transform: translate(-2px, 2px) }
-            40% { transform: translate(-2px, -2px) }
-            60% { transform: translate(2px, 2px) }
-            80% { transform: translate(2px, -2px) }
-            100% { transform: translate(0) }
-        }
-
-        /* ═══════════════════════════════════════════════════════════════
-           TABLET STYLES (600px+)
-           ═══════════════════════════════════════════════════════════════ */
-        @media (min-width: 600px) {
-            .container {
-                padding: 1.5rem;
-            }
-
-            .brand h1 {
-                font-size: 2.5rem;
-            }
-
-            .brand .subtitle {
-                font-size: 0.8rem;
-            }
-
-            .system-status {
-                font-size: 0.67rem;
-            }
-
-            .terminal-content {
-                font-size: 0.85rem;
-            }
-
-            .terminal-label {
-                font-size: 0.8rem;
-            }
-
-            .warning-box p {
-                font-size: 0.75rem;
-            }
-
-            .stat-label {
-                font-size: 0.85rem;
-            }
-
-            .stat-value {
-                font-size: 0.8rem;
-            }
-
-            footer {
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-            }
-        }
-
-        /* ═══════════════════════════════════════════════════════════════
-           DESKTOP STYLES (900px+)
-           ═══════════════════════════════════════════════════════════════ */
-        @media (min-width: 900px) {
-            .container {
-                padding: 2rem;
-            }
-
-            /* Header: Brand left, Status right */
-            header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-            }
-
-            .brand .subtitle {
-                margin-bottom: 0;
-            }
-
-            /* Move system status to header right side */
-            .system-status {
-                flex-direction: row;
-                gap: 10px;
-            }
-
-            .system-status div {
-                padding: 4px 17px;
-            }
-
-            /* Two-column grid */
-            main {
-                display: grid;
-                grid-template-columns: 1fr 340px;
-                grid-template-rows: auto auto;
-                gap: 2rem;
-            }
-
-            .terminal-section {
-                grid-column: 1;
-                grid-row: 1 / 3;
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            /* Sidebar modules */
-            .sidebar-modules {
-                grid-column: 2;
-                grid-row: 1 / 3;
-            }
-
-            /* Status container with space reserved for detail pane */
-            .data-module {
-                min-height: 280px;
-                padding-bottom: 130px;
-            }
-
-            /* Watermark positioned in middle-bottom area between rows and detail pane */
-            .data-module::after {
-                top: auto;
-                bottom: 130px;
-                height: 100px;
-                background-size: 180%;
-                background-position: center center;
-                opacity: 0.10;
-            }
-
-            .terminal-content {
-                font-size: 14px;
-            }
-
-            /* Desktop hover effect on rows */
-            .stat-row {
-                cursor: help;
-            }
-
-            .stat-row:hover {
-                background: rgba(0, 255, 65, 0.15);
-                box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
-            }
-
-            /* Desktop: Show details on hover - detail anchors to data-module bottom */
-            .stat-row:hover + .stat-details,
-            .stat-details:hover {
-                display: block;
-            }
-        }
-
-        /* ═══════════════════════════════════════════════════════════════
-           LARGE DESKTOP (1200px+)
-           ═══════════════════════════════════════════════════════════════ */
-        @media (min-width: 1200px) {
-            main {
-                grid-template-columns: 1fr 380px;
-            }
-        }
-
-        /* ═══════════════════════════════════════════════════════════════
-           SAFE AREA INSETS (Notched phones)
-           ═══════════════════════════════════════════════════════════════ */
-        @supports (padding: max(0px)) {
-            .container {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
-                padding-bottom: max(1rem, env(safe-area-inset-bottom));
-            }
-        }
-
-        /* ═══════════════════════════════════════════════════════════════
-           TOUCH OPTIMIZATIONS
-           ═══════════════════════════════════════════════════════════════ */
-        @media (hover: none) and (pointer: coarse) {
-            .stat-row {
-                min-height: 48px;
-            }
-
-            .nav-link {
-                min-height: 44px;
-                display: flex;
-                align-items: center;
-            }
-        }
-
     </style>
 </head>
 <body>
@@ -660,150 +456,106 @@ Warnings: 0
                     </div>
                 </div>
 
-                <!-- Command List -->
-                <div class="cmd-list">
-                    <div class="cmd-entry">
-                        <code>curl -sL ci5.host | sh</code>
-                        <span class="desc">Full system security audit — rootkits, processes, integrity</span>
+                <div class="command-strip">
+                    <div class="cmd-row" onclick="navigator.clipboard.writeText('curl -sL ci5.host | sh')">
+                        <div class="cmd-label">Full Audit</div>
+                        <div class="cmd-code">curl -sL ci5.host | sh</div>
                     </div>
-                    <div class="cmd-entry">
-                        <code>curl -sL ci5.host | sh -s baseline</code>
-                        <span class="desc">Create system baseline snapshot before CI5 installation</span>
+                    <div class="cmd-row" onclick="navigator.clipboard.writeText('curl -sL ci5.host | sh -s baseline')">
+                        <div class="cmd-label">System Baseline</div>
+                        <div class="cmd-code">curl -sL ci5.host | sh -s baseline</div>
                     </div>
-                    <div class="cmd-entry">
-                        <code>curl -sL ci5.host | sh -s integrity</code>
-                        <span class="desc">Check file integrity against security manifests</span>
+                    <div class="cmd-row" onclick="navigator.clipboard.writeText('curl -sL ci5.host | sh -s integrity')">
+                        <div class="cmd-label">Verify Integrity</div>
+                        <div class="cmd-code">curl -sL ci5.host | sh -s integrity</div>
                     </div>
-                    <div class="cmd-entry">
-                        <code>curl -sL ci5.host | sh -s integrity mullvad</code>
-                        <span class="desc">Check integrity of specific cork installation</span>
+                    <div class="cmd-row" onclick="navigator.clipboard.writeText('curl -sL ci5.host | sh -s integrity mullvad')">
+                        <div class="cmd-label">Verify Cork Integrity</div>
+                        <div class="cmd-code">curl -sL ci5.host | sh -s integrity mullvad</div>
                     </div>
                 </div>
-
+                
                 <div class="warning-box">
                     <div class="warning-title">>> SECURITY ISOLATION NOTICE</div>
-                    <p>AUDIT SYSTEM USES A <span style="color: var(--alert-red);">SEPARATE SIGNING KEY</span> FROM CI5.RUN. CI5.RUN DOES NOT COMPROMISE AUDIT INTEGRITY.</p>
-                    <p>TRUST NOTHING ⇨ VERIFY EVERYTHING ⇨ AUDIT DETECTS TAMPERING ⇨ EVEN IF INSTALLER IS COMPROMISED.</p>
+                    <p>
+                        AUDIT SYSTEM USES A <strong style="color: #6e0303; text-decoration: underline;">SEPARATE SIGNING KEY</strong> 
+                        FROM CI5.RUN: GUARANTEEING ISOLATED INTEGRITY.
+                    </p>
+                    <p style="margin-top: 0.5rem;">
+                        <span style="color: #ffcc00;">⚠</span> 
+                        <span style="color: #aaccaa;">TRUST NOTHING ⇨ VERIFY EVERYTHING <span style="color: #ffcc00;">⚠</span>  ALWAYS AUDIT ⇨ DETECT TAMPERING ⇨ EVADE COMPROMISE <span style="color: #ffcc00;">⚠</span> </span>
+                    </p>
                 </div>
             </section>
 
             <div class="sidebar-modules">
-                <!-- SUB-ROUTINE STATUS (Original Suricata etc) -->
+                
                 <aside class="data-module">
                     <div class="module-header">SUB-ROUTINE STATUS</div>
                     
                     <div class="stat-list">
-                        <div class="stat-row">
-                            <span class="stat-label">Intrusion Detection</span>
-                            <span class="stat-value">SURICATA [ACTIVE]</span>
-                        </div>
-                        <div class="stat-details">
-                            <div class="detail-line"><span class="detail-key">RULES:</span> <span class="detail-val">28,401 SIGNATURES</span></div>
-                            <div class="detail-line"><span class="detail-key">ACTION:</span> <span class="detail-val">MALICE_SIGNAL + POLICY_ENFORCED</span></div>
-                            <div class="detail-block">
-                                >> Inspects traffic streams and protocol behavior against exploit signatures. Policed upon match.
+                        <div class="stat-row"><span class="stat-label">Intrusion Detection</span><span class="stat-value">SURICATA [ACTIVE]</span></div>
+                        <div class="stat-row"><span class="stat-label">Packet Inspection</span><span class="stat-value">DEEP // ACTIVE</span></div>
+                        <div class="stat-row"><span class="stat-label">Traffic Analysis</span><span class="stat-value">NTOPNG // L7</span></div>
+                        <div class="stat-row"><span class="stat-label">Threat Intel</span><span class="stat-value">CROWDSEC // GLOBAL</span></div>
+                        <div class="stat-row"><span class="stat-label">Integrity Check</span><span class="stat-value">HASH_DIFF // LIVE</span></div>
+                        <div class="stat-row"><span class="stat-label">Audit Engine</span><span class="stat-value">C.U.R.E. // RAM</span></div>
+                        <div class="stat-row"><span class="stat-label">Manifest Generation</span><span class="stat-value">SHA256 // POST</span></div>
+                    </div>
+
+                    <div class="stat-details-wrapper">
+                        
+                        <div class="stat-details detail-default">
+                            <div class="detail-line">
+                                <span class="detail-key" style="opacity:0.5; letter-spacing: 2px;">0x_SRC:</span> 
+                                <span class="detail-val" style="opacity:0.5; letter-spacing: 2px;">NULL_PTR</span>
+                            </div>
+                            <div class="detail-line">
+                                <span class="detail-key" style="opacity:0.5; letter-spacing: 2px;">0x_EFF:</span> 
+                                <span class="detail-val" style="opacity:0.5; letter-spacing: 2px;">###_VOID</span>
+                            </div>
+                            <div class="detail-block" style="opacity: 0.5;">
+                                >> Awaiting input selection... <br>
+                                >> Select module to decrypt diagnostics.
                             </div>
                         </div>
 
-                        <div class="stat-row">
-                            <span class="stat-label">Packet Inspection</span>
-                            <span class="stat-value">DEEP // ACTIVE</span>
+                        <div class="stat-details detail-1">
+                            <div class="detail-line"><span class="detail-key">RULES:</span> <span class="detail-val">28,401 SIGS</span></div>
+                            <div class="detail-line"><span class="detail-key">ACTION:</span> <span class="detail-val">MALICE_SIGNAL</span></div>
+                            <div class="detail-block">>> Inspects traffic streams and protocol behavior against exploit signatures.</div>
                         </div>
-                        <div class="stat-details">
-                            <div class="detail-line"><span class="detail-key">SCOPE:</span> <span class="detail-val">LAYER 7 (APP)</span></div>
+                        <div class="stat-details detail-2">
+                            <div class="detail-line"><span class="detail-key">SCOPE:</span> <span class="detail-val">L7 (APP)</span></div>
                             <div class="detail-line"><span class="detail-key">METHOD:</span> <span class="detail-val">HEADER_DECAP</span></div>
-                            <div class="detail-block">
-                                >> Unpacks packet headers to analyze application logic, detecting hidden tunnels & C2 channels.
-                            </div>
+                            <div class="detail-block">>> Unpacks headers to analyze application logic, detecting hidden tunnels & C2 channels.</div>
                         </div>
-
-                        <div class="stat-row">
-                            <span class="stat-label">Traffic Analysis</span>
-                            <span class="stat-value">NTOPNG // L7</span>
-                        </div>
-                        <div class="stat-details">
-                            <div class="detail-line"><span class="detail-key">VISIBILITY:</span> <span class="detail-val">FLOW_DECODE</span></div>
+                        <div class="stat-details detail-3">
+                            <div class="detail-line"><span class="detail-key">VIEW:</span> <span class="detail-val">FLOW_DECODE</span></div>
                             <div class="detail-line"><span class="detail-key">METRIC:</span> <span class="detail-val">PROTOCOL_ID</span></div>
-                            <div class="detail-block">
-                                >> Real-time visualization of bandwidth consumers. Identifies devices & protocols by behavior.
-                            </div>
+                            <div class="detail-block">>> Real-time visualization of bandwidth consumers. Identifies devices & protocols.</div>
                         </div>
-
-                        <div class="stat-row">
-                            <span class="stat-label">Threat Intel</span>
-                            <span class="stat-value">CROWDSEC // GLOBAL</span>
-                        </div>
-                        <div class="stat-details">
+                        <div class="stat-details detail-4">
                             <div class="detail-line"><span class="detail-key">SOURCE:</span> <span class="detail-val">COMMUNITY_HIVE</span></div>
                             <div class="detail-line"><span class="detail-key">EFFECT:</span> <span class="detail-val">PRE-EMPTIVE_BAN</span></div>
-                            <div class="detail-block">
-                                >> Ingests global attack signals. Blocks IPs reported by other nodes before they touch your WAN.
-                            </div>
+                            <div class="detail-block">>> Ingests global attack signals. Blocks IPs reported by other nodes before they touch your WAN.</div>
                         </div>
-
-                        <div class="stat-row">
-                            <span class="stat-label">Audit Engine</span>
-                            <span class="stat-value">C.U.R.E. // RAM</span>
+                        <div class="stat-details detail-5">
+                            <div class="detail-line"><span class="detail-key">DETECT:</span> <span class="detail-val">MODIFICATION</span></div>
+                            <div class="detail-line"><span class="detail-key">FREQ:</span> <span class="detail-val">CONTINUOUS</span></div>
+                            <div class="detail-block">>> Compares current state to known-good manifest. Detects unauthorized changes.</div>
                         </div>
-                        <div class="stat-details">
+                        <div class="stat-details detail-6">
                             <div class="detail-line"><span class="detail-key">TECH:</span> <span class="detail-val">OVERLAYFS_DIFF</span></div>
-                            <div class="detail-line"><span class="detail-key">TRAP:</span> <span class="detail-val">WRITE_CAPTURE</span></div>
-                            <div class="detail-block">
-                                >> Creates ephemeral RAM layer over /etc. If Cork writes to it, intent is flagged as malicious.
-                            </div>
+                            <div class="detail-line"><span class="detail-key">TRIGGER:</span> <span class="detail-val">WRITE_OPS</span></div>
+                            <div class="detail-block">>> Creates ephemeral RAM layer over /etc. If Cork writes to it, intent is flagged as malicious.</div>
                         </div>
-                    </div>
-                </aside>
-
-                <!-- AUDIT CAPABILITIES -->
-                <aside class="data-module">
-                    <div class="module-header">AUDIT CAPABILITIES</div>
-                    
-                    <div class="stat-list">
-                        <div class="stat-row">
-                            <span class="stat-label">Pre-Install Scan</span>
-                            <span class="stat-value">AUTO // CI5.RUN</span>
-                        </div>
-                        <div class="stat-details">
-                            <div class="detail-line"><span class="detail-key">CHECKS:</span> <span class="detail-val">ROOTKITS, MINERS, SHELLS</span></div>
-                            <div class="detail-block">
-                                >> Automatically invoked before any cork installation. Captures baseline and scans for threats.
-                            </div>
-                        </div>
-
-                        <div class="stat-row">
-                            <span class="stat-label">Manifest Generation</span>
-                            <span class="stat-value">SHA256 // POST</span>
-                        </div>
-                        <div class="stat-details">
+                        <div class="stat-details detail-7">
                             <div class="detail-line"><span class="detail-key">SCOPE:</span> <span class="detail-val">ALL CORK FILES</span></div>
-                            <div class="detail-block">
-                                >> Generates security manifest after install. Every file hashed for integrity verification.
-                            </div>
+                            <div class="detail-line"><span class="detail-key">VERIFY:</span> <span class="detail-val">PRE_BOOT</span></div>
+                            <div class="detail-block">>> Generates security manifest after install. Every file hashed for integrity verification.</div>
                         </div>
-
-                        <div class="stat-row">
-                            <span class="stat-label">Integrity Check</span>
-                            <span class="stat-value">HASH_DIFF // LIVE</span>
-                        </div>
-                        <div class="stat-details">
-                            <div class="detail-line"><span class="detail-key">DETECT:</span> <span class="detail-val">MODIFICATION, DELETION</span></div>
-                            <div class="detail-block">
-                                >> Compares current state to known-good manifest. Detects unauthorized changes.
-                            </div>
-                        </div>
-
-                        <div class="stat-row">
-                            <span class="stat-label">Key Isolation</span>
-                            <span class="stat-value">INDEPENDENT</span>
-                        </div>
-                        <div class="stat-details">
-                            <div class="detail-line"><span class="detail-key">CI5.RUN:</span> <span class="detail-val">KEY_A</span></div>
-                            <div class="detail-line"><span class="detail-key">CI5.HOST:</span> <span class="detail-val">KEY_B (DIFFERENT)</span></div>
-                            <div class="detail-block">
-                                >> Separate signing keys. If ci5.run is compromised, audit remains trusted.
-                            </div>
-                        </div>
+                        
                     </div>
                 </aside>
             </div>
