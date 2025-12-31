@@ -24,15 +24,15 @@
         
         html, body {
             width: 100%;
-            height: 100vh; /* Force single frame */
-            overflow: hidden; /* Prevent scrolling */
+            height: 100vh;
+            overflow: hidden;
         }
 
         body {
             background-color: var(--matrix-black);
             color: var(--matrix-green);
             font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
+            font-size: 12px; /* Kept small font */
             line-height: 1.4;
             display: flex;
             flex-direction: column;
@@ -64,9 +64,9 @@
         /* --- LAYOUT CONTAINER --- */
         .container {
             width: 100%;
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 1.5vh 2rem;
+            padding: 1vh 2rem;
             height: 100%;
             position: relative;
             z-index: 10;
@@ -77,8 +77,11 @@
         /* --- HEADER --- */
         header {
             border-bottom: 2px solid var(--matrix-green);
-            padding-bottom: 1.5vh;
-            margin-bottom: 2vh;
+            
+            /* VERTICAL FIX: Reduced padding/margin */
+            padding-bottom: 1vh;
+            margin-bottom: 1vh; 
+            
             text-transform: uppercase;
             letter-spacing: 2px;
             flex-shrink: 0;
@@ -120,8 +123,8 @@
         main {
             flex: 1;
             display: grid;
-            grid-template-columns: 1fr 550px;
-            gap: 2rem;
+            grid-template-columns: 1fr 420px;
+            gap: 1.5rem;
             min-height: 0;
         }
 
@@ -156,7 +159,7 @@
         .terminal-window {
             border: 1px solid var(--matrix-green);
             background: rgba(0, 20, 0, 0.6);
-            padding: 1.5rem;
+            padding: 1.477rem;
             box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
             flex: 1;
             overflow-y: auto;
@@ -174,15 +177,18 @@
 
         .warning-box {
             background: repeating-linear-gradient(45deg, rgba(0,0,0,0), rgba(0,0,0,0) 10px, rgba(0, 255, 65, 0.05) 10px, rgba(0, 255, 65, 0.05) 20px);
-            border: 4.2px solid #7700007a;
+            border: 3px solid #7700007a;
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-            padding: 1.23rem;
+            
+            /* VERTICAL FIX: Reduced padding */
+            padding: 0.741rem; 
+            
             flex-shrink: 0; 
             min-height: min-content;
         }
 
-        .warning-title { color: #ffcc00; font-weight: bold; border-bottom: 1px solid #500c00; padding-bottom: 4px; margin-bottom: 0.5rem; display: inline-block; font-size: 0.85rem; }
-        .warning-box p { font-size: 0.741rem; color: #88aa88; line-height: 1.4; white-space: normal; }
+        .warning-title { color: #ffcc00; font-weight: bold; border-bottom: 1px solid #2b010100; padding-bottom: 4px; margin-bottom: 0.5rem; display: inline-block; font-size: 0.85rem; }
+        .warning-box p { font-size: 0.69rem; color: #88aa88; line-height: 1.4; white-space: normal; }
 
         /* --- RIGHT COLUMN --- */
         .sidebar-modules {
@@ -191,27 +197,18 @@
             height: 100%;
         }
 
-        /* --- STATUS MODULE (STEALTH + ACCENTS) --- */
+        /* --- STATUS MODULE --- */
         .data-module {
-            /* Solid Black Background (Stealth Core) */
             background-color: #000000;
-            
-            /* RESTORED: Green Edge Accents (Semi-transparent) */
             border: 1px solid rgba(0, 255, 65, 0.4);
-            
-            /* Strong Top Accent */
             border-top: 2px solid var(--matrix-green);
-            
-            /* ADDED: Subtle Green Glow to separate from void */
             box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
-            
             flex: 1; 
             display: flex;
             flex-direction: column;
             position: relative;
         }
 
-        /* The Watermark (Made subtler for black background) */
         .data-module::after {
             content: "";
             position: absolute;
@@ -224,23 +221,18 @@
             background-repeat: no-repeat;
             background-position: center center;
             background-size: 333%;
-            opacity: 0.05; /* Reduced opacity */
+            opacity: 0.05; 
             pointer-events: none;
             mix-blend-mode: screen;
             z-index: 0;
         }
 
         .module-header {
-            /* Black header to match body */
             background: #000000;
-            color: var(--matrix-green); /* Green Text Accent */
-            
+            color: var(--matrix-green); 
             padding: 0.8rem;
             font-weight: bold;
-            
-            /* Sharp green divider */
             border-bottom: 1px solid var(--matrix-green);
-            
             text-transform: uppercase;
             font-size: 0.85rem;
             letter-spacing: 1px;
@@ -258,11 +250,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.74vh 1rem;
             
-            /* Very subtle dark grey separator (Stealth look) */
+            /* VERTICAL FIX: Drastically reduced padding from 1.74vh to 1.1vh */
+            padding: 1.1vh 1rem;
+            
             border-bottom: 2px solid #05240169; 
-            
             transition: all 0.2s;
             cursor: help;
             position: relative;
@@ -270,26 +262,16 @@
         }
 
         .stat-row:hover {
-            /* Dark Grey hover instead of green */
             background: #080808; 
-            border-left: 2px solid var(--matrix-green); /* Green indicator on hover */
-            padding-left: calc(1rem - 2px); /* Prevent layout shift */
+            border-left: 2px solid var(--matrix-green);
+            padding-left: calc(1rem - 2px);
         }
 
-        /* Labels are now Grey to fade into the black */
         .stat-label { color: #666; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px; }
-        
-        /* Values remain White/Bright for contrast */
         .stat-value { font-weight: bold; color: #e0e0e0; font-size: 0.8rem; text-shadow: none; }
         
-        /* Green glow only on the active/important text */
-        .stat-row:hover .stat-value {
-            color: #fff;
-            text-shadow: 0 0 5px var(--matrix-green);
-        }
-        .stat-row:hover .stat-label {
-            color: #aaa;
-        }
+        .stat-row:hover .stat-value { color: #fff; text-shadow: 0 0 5px var(--matrix-green); }
+        .stat-row:hover .stat-label { color: #aaa; }
 
         /* --- HOVER DETAILS LOGIC --- */
         .stat-details-wrapper {
@@ -303,17 +285,17 @@
 
         .stat-details {
             display: none;
-            background: #000000; /* Pure black background for readability */
+            background: #000000;
             border-top: 1px solid var(--matrix-green);
             padding: 1.2rem;
-            min-height: 140px;
+            
+            /* VERTICAL FIX: Allow it to be slightly shorter */
+            min-height: 120px;
         }
 
-        /* Scramble Box Logic */
         .detail-default { display: block; }
         .data-module:has(.stat-row:hover) .detail-default { display: none; }
 
-        /* Specific Detail Logic */
         .data-module:has(.stat-row:nth-child(1):hover) .detail-1,
         .data-module:has(.stat-row:nth-child(2):hover) .detail-2,
         .data-module:has(.stat-row:nth-child(3):hover) .detail-3,
@@ -361,7 +343,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.74vh 14.7px;
+            
+            /* VERTICAL FIX: Reduced from 1.74vh to 1vh */
+            padding: 1.33vh 14.7px;
+            
             background: rgba(0, 15, 0, 0.3);
             border-left: 2px solid rgba(0, 255, 65, 0.3);
             transition: all 0.2s;
@@ -380,8 +365,11 @@
         /* --- FOOTER --- */
         footer {
             border-top: 1px solid var(--matrix-green);
-            padding-top: 1.5vh;
-            margin-top: 2vh;
+            
+            /* VERTICAL FIX: Reduced margin/padding */
+            padding-top: 1vh;
+            margin-top: 1vh;
+            
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -478,12 +466,12 @@ Warnings: 0
                 <div class="warning-box">
                     <div class="warning-title">>> SECURITY ISOLATION NOTICE</div>
                     <p>
-                        AUDIT SYSTEM USES A <strong style="color: #6e0303; text-decoration: underline;">SEPARATE SIGNING KEY</strong> 
+                        AUDIT SYSTEM USES A <strong style="color: #6e0303; text-decoration-line: underline;">SEPARATE SIGNING KEY</strong> 
                         FROM CI5.RUN: GUARANTEEING ISOLATED INTEGRITY.
                     </p>
                     <p style="margin-top: 0.5rem;">
                         <span style="color: #ffcc00;">⚠</span> 
-                        <span style="color: #aaccaa;">TRUST NOTHING ⇨ VERIFY EVERYTHING <span style="color: #ffcc00;">⚠</span>  ALWAYS AUDIT ⇨ DETECT TAMPERING ⇨ EVADE COMPROMISE <span style="color: #ffcc00;">⚠</span> </span>
+                        <span style="color: #aaccaa;">TRUST NOTHING ⇨ VERIFY EVERYTHING <span style="color: #ffcc00;">⚠</span> INVARIABLY AUDIT ⇨ UNMASK TAMPERING ⇨ PREVENT COMPROMISE <span style="color: #ffcc00;">⚠</span> </span>
                     </p>
                 </div>
             </section>
@@ -538,7 +526,7 @@ Warnings: 0
                         <div class="stat-details detail-4">
                             <div class="detail-line"><span class="detail-key">SOURCE:</span> <span class="detail-val">COMMUNITY_HIVE</span></div>
                             <div class="detail-line"><span class="detail-key">EFFECT:</span> <span class="detail-val">PRE-EMPTIVE_BAN</span></div>
-                            <div class="detail-block">>> Ingests global attack signals. Blocks IPs reported by other nodes before they touch your WAN.</div>
+                            <div class="detail-block">>> Ingests global attack signals. Blocks IPs reported by others before they touch your WAN.</div>
                         </div>
                         <div class="stat-details detail-5">
                             <div class="detail-line"><span class="detail-key">DETECT:</span> <span class="detail-val">MODIFICATION</span></div>
