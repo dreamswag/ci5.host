@@ -1,6 +1,6 @@
 #!/bin/sh
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  CI5.HOST BOOTSTRAP STUB v1.1 (PATCHED)                                   ║
+# ║  CI5.HOST BOOTSTRAP STUB v7.4-RC-1 (PATCHED)                                   ║
 # ║  https://github.com/dreamswag/ci5.host                                    ║
 # ║                                                                           ║
 # ║  ISOLATED TRUST ANCHOR FOR AUDIT SYSTEM                                   ║
