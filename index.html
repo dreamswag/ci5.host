@@ -21,11 +21,13 @@
 
         /* --- RESET & BASE --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+
         html, body {
             width: 100%;
+            max-width: 100vw;
             height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: hidden;
         }
 
         body {
@@ -72,6 +74,7 @@
             z-index: 10;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
 
         /* --- HEADER --- */
@@ -172,7 +175,7 @@
         }
 
         /* CHANGED: Reduced margin to compress vertical space */
-        .output { color: #aaffaa; opacity: 0.9; margin: 0.33rem 0; display: block; white-space: pre-wrap; }
+        .output { color: #aaffaa; opacity: 0.9; margin: 0.33rem 0; display: block; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; }
         
         .prompt { color: var(--matrix-bright); margin-right: 8px; }
         .cursor { display: inline-block; width: 8px; height: 1em; background: var(--matrix-green); animation: blink 1s step-end infinite; vertical-align: middle; }
@@ -390,11 +393,99 @@
 
         /* Mobile Responsive Fallback */
         @media (max-width: 900px) {
-            html, body { height: auto; overflow: auto; }
+            html, body { height: auto; overflow-x: hidden; overflow-y: auto; }
             main { grid-template-columns: 1fr; }
             .data-module { min-height: 400px; }
-            .container { height: auto; }
+            .container { height: auto; padding: 2vh 1rem; }
             .terminal-section, .sidebar-modules { height: auto; }
+
+            /* Stack header vertically */
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            /* Wrap status badges */
+            .system-status {
+                flex-wrap: wrap;
+                width: 100%;
+            }
+
+            .system-status div {
+                flex: 1 1 auto;
+                min-width: 120px;
+                text-align: center;
+                font-size: 0.6rem;
+                padding: 4px 8px;
+            }
+        }
+
+        /* Narrow mobile (iPhone etc) */
+        @media (max-width: 500px) {
+            html, body { overflow-x: hidden; }
+
+            .container { padding: 1.5vh 0.75rem; }
+
+            .brand h1 { font-size: 1.6rem; }
+            .brand .subtitle { font-size: 0.65rem; padding: 2px 6px; }
+
+            /* Stack status badges vertically */
+            .system-status {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .system-status div {
+                width: 100%;
+                text-align: left;
+                font-size: 0.65rem;
+            }
+
+            /* Command strip: stack label and code vertically */
+            .cmd-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                padding: 0.8rem 10px;
+            }
+
+            .cmd-label { font-size: 0.65rem; }
+
+            .cmd-code {
+                font-size: 0.68rem;
+                word-break: break-all;
+                width: 100%;
+            }
+
+            /* Terminal adjustments */
+            .terminal-window { padding: 0.5rem 0.75rem; }
+            .terminal-content { font-size: 0.75rem; }
+            .terminal-label { font-size: 0.65rem; left: 6px; }
+
+            /* Warning box */
+            .warning-box { padding: 0.6rem; }
+            .warning-box p { font-size: 0.6rem; }
+            .warning-title { font-size: 0.75rem; }
+
+            /* Module adjustments */
+            .module-header { font-size: 0.75rem; padding: 0.6rem; }
+            .stat-label, .stat-value { font-size: 0.7rem; }
+            .stat-row {
+                padding: 0.8vh 0.75rem;
+                flex-wrap: wrap;
+                gap: 2px;
+            }
+            .stat-value { word-break: break-word; }
+
+            /* Footer */
+            footer {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+                font-size: 0.65rem;
+            }
+            footer nav { justify-content: center; }
         }
     </style>
 </head>

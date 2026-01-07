@@ -1,7 +1,7 @@
 #!/bin/sh
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║  CI5.HOST SECURITY AUDIT v1.0                                             ║
-# ║  https://github.com/dreamswag/ci5.host                                    ║
+# ║  https://codeberg.org/Ci-5/host                                           ║
 # ║                                                                           ║
 # ║  Comprehensive security scanning with Pure state integration              ║
 # ║  - Pre-install baseline capture                                           ║

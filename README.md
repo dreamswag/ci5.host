@@ -1,4 +1,4 @@
-###### 📟 [ci5.run](https://github.com/dreamswag/ci5.run): curl ~ 🔬 [ci5.host](https://github.com/dreamswag/ci5.host): cure ~ 🧪 [ci5.dev](https://github.com/dreamswag/ci5.dev): cork ~ 🥼 [ci5.network](https://github.com/dreamswag/ci5.network): cert ~ 📡[ci5](https://github.com/dreamswag/ci5)🛰️
+###### 📟 [ci5.run](https://codeberg.org/Ci-5/run): curl ~ 🔬 [ci5.host](https://codeberg.org/Ci-5/host): cure ~ 🧪 [ci5.dev](https://codeberg.org/Ci-5/dev): cork ~ 🥼 [ci5.network](https://codeberg.org/Ci-5/network): cert ~ 📡[ci5](https://codeberg.org/Ci-5/OS)🛰️
 # 🔬 **[ci5.host](https://ci5.host): Isolate. Cork. Un-Plug.** 🔍🛸
 
 ## 🧬 Purpose
@@ -58,9 +58,9 @@ Result: SAFE
 
 | Doc | Purpose |
 |-----|---------|
-| [CORKS.md](https://github.com/dreamswag/ci5.network/blob/main/docs/CORKS.md) | Full Cork auditing guide |
-| [MAINTENANCE.md](https://github.com/dreamswag/ci5.network/blob/main/docs/MAINTENANCE.md) | Diagnostics & recovery |
-| [SUPPORT.md](https://github.com/dreamswag/ci5.network/blob/main/docs/SUPPORT.md) | Self-service troubleshooting |
+| [CORKS.md](https://codeberg.org/Ci-5/network/src/branch/main/docs/CORKS.md) | Full Cork auditing guide |
+| [MAINTENANCE.md](https://codeberg.org/Ci-5/network/src/branch/main/docs/MAINTENANCE.md) | Diagnostics & recovery |
+| [SUPPORT.md](https://codeberg.org/Ci-5/network/src/branch/main/docs/SUPPORT.md) | Self-service troubleshooting |
 
 ---
 
